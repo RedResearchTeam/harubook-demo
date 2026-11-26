@@ -35,5 +35,5 @@ window.HARU_REC = [{"m":0,"method":"POST","path":"/api/reset","status":200,"resu
       padding:6px 10px;border-radius:8px;opacity:.85;max-width:calc(100vw - 24px)}
     body.show #rec-note{display:none}</style>`);
   addEventListener("DOMContentLoaded", () => document.body.insertAdjacentHTML("beforeend",
-    `<div id="rec-note">공개용 녹화판 — 버튼은 실제 시스템으로 미리 돌려 둔 결과를 보여 줍니다. 이름·지점은 모두 지어낸 것입니다.</div>`));
+    `<div id="rec-note">${typeof ui === "function" ? ui("rec") : "공개용 녹화판"}</div>`));
 })();

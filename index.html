@@ -141,10 +141,10 @@ body.playing .wrap{padding-bottom:230px}
 </style>
 </head>
 <body>
-<header><h1>하루책 시연 — 회원 가입부터 학생 손에 닿기까지</h1><span class="mute">모든 이름·지점은 지어낸 것입니다</span><span style="flex:1"></span>
+<header><h1 data-i18n="h1">하루책 시연 — 회원 가입부터 학생 손에 닿기까지</h1><span class="mute" data-i18n="fake">모든 이름·지점은 지어낸 것입니다</span><span style="flex:1"></span>
   <select id="lang" title="나레이션 언어 · Narration language · 旁白語言" aria-label="Narration language"><option value="ko">한국어</option><option value="en">English</option><option value="zh-TW">繁體中文</option></select>
   <button class="playbtn" id="play-on" title="나레이션과 함께 처음부터 끝까지 자동으로 진행합니다(스페이스: 일시정지)">🔊 시연 시작</button>
-  <button class="showbtn" id="show-on" title="전체 화면으로 → ← 키로 직접 넘깁니다">▶ 전체 화면(직접 넘기기)</button><a class="live" href="/">운영 화면으로</a></header>
+  <button class="showbtn" id="show-on" title="전체 화면으로 → ← 키로 직접 넘깁니다"><span data-i18n="show">▶ 전체 화면(직접 넘기기)</span></button><a class="live" href="/" data-i18n="ops">운영 화면으로</a></header>
 <div id="start" role="dialog" aria-modal="true" aria-labelledby="start-title"><div class="box">
   <div data-i18n="start"><h3 id="start-title">🔊 나레이션 시연</h3><p>전체 화면으로 바뀌고 나레이션과 함께 끝까지 저절로 진행합니다. 스페이스로 멈추고, Esc 로 끝냅니다.</p></div>
   <button class="p" data-start="fresh" data-i18n="fresh">처음부터 시작<small>지금 DB를 시연 데이터로 되돌리고 1단계부터</small></button>
@@ -158,12 +158,15 @@ body.playing .wrap{padding-bottom:230px}
   <button class="b ctl" id="bar-play" title="스페이스">⏸ 일시정지</button>
   <select class="ctl" id="bar-rate" title="나레이션 속도"><option value="1">1.0배</option><option value="1.15" selected>1.15배</option><option value="1.3">1.3배</option><option value="1.5">1.5배</option></select>
   <button class="b p" id="bar-next">→</button><button class="b" id="show-off" title="발표 모드 끝내기(Esc)">✕</button></div>
+<script src="demo-i18n.js"></script>
 <script src="replay.js"></script>
 <script>
 const $ = q => document.querySelector(q);
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => Number(v || 0).toLocaleString("ko-KR");
-async function api(path, body){
+// api: 서버 응답을 지금 언어로 바꿔 돌려준다(demo-i18n.js 의 trData). apiRaw: 원문 그대로.
+async function api(path, body){ return trData(await apiRaw(path, body)); }
+async function apiRaw(path, body){
   if(window.HARU_REPLAY) return window.HARU_REPLAY(path, body);   // 공개용 정적 시연: 녹화한 응답을 돌려준다
   const res = await fetch(path, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
   const data = await res.json();
@@ -175,32 +178,33 @@ let ctx = {step:0, done:{}}; try{ ctx = JSON.parse(localStorage.getItem(KEY)) ||
 const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(ctx)); }catch(e){} };
 let META, msg = null;
 const DOW = ["월","화","수","목","금","토","일"];
+const dayOf = i => L(DOW[i], ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][i], ["週一","週二","週三","週四","週五","週六","週日"][i]);
 const chip = (label, kind="") => `<span class="chip ${kind}">${esc(label)}</span>`;
 const stat = s => chip(META.status[s] || s, ({delivered:"ok",handed:"ok",received:"ok",shipped:"ok",packed:"ok",bound:"ok",printed:"ok",defect:"bad"})[s] || "");
-const chain = c => `<div class="chain"><div><small>🧒 학생</small>${esc(c.name)} <span class="mute">${esc(c.grade)}</span><small class="mono">${c.code}</small></div><i>→</i>
-  <div><small>👩‍🏫 담당 교사</small>${esc(c.teacher_name)}<small>${DOW[c.visit_dow]}요일 방문</small></div><i>→</i>
-  <div><small>🏢 지점</small>${esc(c.branch_name)}<small class="mono">${c.branch_code}</small></div><i>→</i>
-  <div><small>🗺️ 광역</small>${esc(c.region_name)}</div><i>→</i>
-  <div><small>🚚 배송 권역(노선)</small>${esc(c.route)}<small>${c.stop_seq}번째로 내림</small></div></div>`;
+const chain = c => `<div class="chain"><div><small>🧒 ${L("학생","Student","學生")}</small>${esc(c.name)} <span class="mute">${esc(c.grade)}</span><small class="mono">${c.code}</small></div><i>→</i>
+  <div><small>👩‍🏫 ${L("담당 교사","Teacher","負責老師")}</small>${esc(c.teacher_name)}<small>${L(`${dayOf(c.visit_dow)}요일 방문`, `Visits on ${dayOf(c.visit_dow)}`, `${dayOf(c.visit_dow)}到府`)}</small></div><i>→</i>
+  <div><small>🏢 ${L("지점","Branch","分處")}</small>${esc(c.branch_name)}<small class="mono">${c.branch_code}</small></div><i>→</i>
+  <div><small>🗺️ ${L("광역","Region","區域")}</small>${esc(c.region_name)}</div><i>→</i>
+  <div><small>🚚 ${L("배송 권역(노선)","Delivery route","配送路線")}</small>${esc(c.route)}<small>${L(`${c.stop_seq}번째로 내림`, `Stop ${c.stop_seq}`, `第 ${c.stop_seq} 站卸貨`)}</small></div></div>`;
 // 장면 그림: [이모지, 설명, 움직임(pop·spin·drive·feed·dim)] 을 화살표로 잇는다. "|" 는 화살표 없는 띄움.
 const scene = (...items) => `<div class="scene mini" aria-hidden="true">${items.map((it, i) => it === "|" ? `<span style="width:22px"></span>` :
   `${i && items[i-1] !== "|" ? '<span class="arrow">➜</span>' : ""}<div class="it ${it[2]||""}"><b>${it[0]}</b><small>${it[1]||""}</small></div>`).join("")}</div>`;
 const SCENES = [
-  () => scene(["📚","미리 대량 인쇄","dim"], ["🙋","손으로 뽑아 모으기","dim"], "|", ["🖨️","그 주 분량만 인쇄","pop"], ["📘","학생 한 명의 책"], ["🧒","방문 수업"]),
-  () => scene(["🧒","새 학생","pop"], ["👩‍🏫","교사"], ["🏢","지점"], ["🗺️","광역"], ["🚚","배송 권역"]),
-  () => scene(["🧒","학생마다"], ["📗","국어 6호"], "|", ["📘","수학 4호"], "|", ["📙","주당 분량","spin"], ["⏰","컷오프 전까지 조정"]),
-  () => scene(["📄","원고 PDF","feed"], ["📄","1쪽·2쪽…","feed"], ["📘","책 본문"], "|", ["✍️","이름은 따로 얹기","spin"]),
-  () => scene(["⏰","컷오프","spin"], ["📋","학생별 주문 확정"], ["📘","한 권으로 합본"], ["🔢","코드 부여","pop"]),
-  () => scene(["🚚","권역"], ["🏢","지점"], ["👩‍🏫","교사"], ["📅","방문 요일"], ["🧒","학생"], "|", ["🖨️","이 순서대로 인쇄","pop"]),
-  () => scene(["🖥️","학생별 PDF"], ["📄","표지·본문","feed"], ["🧻","롤 용지에 배열"], ["✂️","재단 표시","spin"]),
-  () => scene(["🧻","롤 용지"], ["🖨️","인쇄","pop"], ["📄","접기","feed"], ["📎","중철 제본","spin"], ["🔍","QR 코드 검수"]),
-  () => scene(["📘","책"], ["🧺","교사 묶음","pop"], ["📦","지점 박스"], ["🚚","권역 차량","drive"]),
-  () => scene(["🚚","배송","drive"], ["🏢","지점 입고"], ["👩‍🏫","교사 수령"], ["🧒","학생 전달","pop"]),
-  () => scene(["👩‍🏫","지난 책 확인","spin"], ["✅","다 했다"], "|", ["⏳","다 못 했다"], ["⏸️","그 과목은 쉬기","pop"]),
-  () => scene(["📗","국어","pop"], ["🖨️","인쇄"], "|", ["📘","수학","dim"], ["⏸️","이번 주는 안 만듦"]),
-  () => scene(["⏸️","한 주 쉼","dim"], ["▶️","멈춘 호에서 다시","pop"], ["📘","수학"], ["🧒","이어서 공부"]),
-  () => scene(["✏️","채점"], ["📸","사진 한 장","pop"], ["🔎","쪽 QR 코드 읽기","spin"], ["🧒","누구의 몇 쪽인지 자동"], ["📕","오답 노트 재료"]),
-  () => scene(["🧒","가입"], ["📘","맞춤 책"], ["🚚","배송"], ["👩‍🏫","수업"], ["🎉","끝!","pop"]),
+  () => scene(["📚",L("미리 대량 인쇄","Mass printing in advance","事先大量印刷"),"dim"], ["🙋",L("손으로 뽑아 모으기","Picking by hand","人工挑選彙整"),"dim"], "|", ["🖨️",L("그 주 분량만 인쇄","Print only that week","只印當週份量"),"pop"], ["📘",L("학생 한 명의 책","One book per student","一位學生一本書")], ["🧒",L("방문 수업","Home visit","到府上課")]),
+  () => scene(["🧒",L("새 학생","New student","新學生"),"pop"], ["👩‍🏫",L("교사","Teacher","老師")], ["🏢",L("지점","Branch","分處")], ["🗺️",L("광역","Region","區域")], ["🚚",L("배송 권역","Route","配送路線")]),
+  () => scene(["🧒",L("학생마다","Each student","每位學生")], ["📗",L("국어 6호","Korean No. 6","國語第 6 期")], "|", ["📘",L("수학 4호","Math No. 4","數學第 4 期")], "|", ["📙",L("주당 분량","Weekly pace","每週份量"),"spin"], ["⏰",L("컷오프 전까지 조정","Adjust before cutoff","截單前可調整")]),
+  () => scene(["📄",L("원고 PDF","Content PDF","原稿 PDF"),"feed"], ["📄",L("1쪽·2쪽…","Page 1, 2…","第 1、2 頁…"),"feed"], ["📘",L("책 본문","Book body","書的內頁")], "|", ["✍️",L("이름은 따로 얹기","Name added at print","姓名另外套印"),"spin"]),
+  () => scene(["⏰",L("컷오프","Cutoff","截單"),"spin"], ["📋",L("학생별 주문 확정","Orders fixed per student","確定每位學生的訂單")], ["📘",L("한 권으로 합본","Combined into one book","合成一本")], ["🔢",L("코드 부여","Code assigned","賦予代碼"),"pop"]),
+  () => scene(["🚚",L("권역","Route","路線")], ["🏢",L("지점","Branch","分處")], ["👩‍🏫",L("교사","Teacher","老師")], ["📅",L("방문 요일","Visit day","到府星期")], ["🧒",L("학생","Student","學生")], "|", ["🖨️",L("이 순서대로 인쇄","Print in this order","依此順序印刷"),"pop"]),
+  () => scene(["🖥️",L("학생별 PDF","PDF per student","每位學生的 PDF")], ["📄",L("표지·본문","Cover and body","封面・內頁"),"feed"], ["🧻",L("롤 용지에 배열","Laid out on the roll","排在捲筒紙上")], ["✂️",L("재단 표시","Trim marks","裁切線"),"spin"]),
+  () => scene(["🧻",L("롤 용지","Paper roll","捲筒紙")], ["🖨️",L("인쇄","Print","印刷"),"pop"], ["📄",L("접기","Fold","摺頁"),"feed"], ["📎",L("중철 제본","Saddle stitch","騎馬釘裝訂"),"spin"], ["🔍",L("QR 코드 검수","QR check","QR 碼檢驗")]),
+  () => scene(["📘",L("책","Book","書")], ["🧺",L("교사 묶음","Teacher bundle","老師套組"),"pop"], ["📦",L("지점 박스","Branch box","分處箱")], ["🚚",L("권역 차량","Route truck","路線貨車"),"drive"]),
+  () => scene(["🚚",L("배송","Delivery","配送"),"drive"], ["🏢",L("지점 입고","Branch receipt","分處入庫")], ["👩‍🏫",L("교사 수령","Teacher pickup","老師領取")], ["🧒",L("학생 전달","To the student","交給學生"),"pop"]),
+  () => scene(["👩‍🏫",L("지난 책 확인","Check last book","確認上一本"),"spin"], ["✅",L("다 했다","Finished","做完了")], "|", ["⏳",L("다 못 했다","Not finished","沒做完")], ["⏸️",L("그 과목은 쉬기","That subject rests","該科目暫停"),"pop"]),
+  () => scene(["📗",L("국어","Korean","國語"),"pop"], ["🖨️",L("인쇄","Print","印刷")], "|", ["📘",L("수학","Math","數學"),"dim"], ["⏸️",L("이번 주는 안 만듦","Not made this week","本週不製作")]),
+  () => scene(["⏸️",L("한 주 쉼","Rested a week","休息一週"),"dim"], ["▶️",L("멈춘 호에서 다시","Resumes where it stopped","從停下的期數繼續"),"pop"], ["📘",L("수학","Math","數學")], ["🧒",L("이어서 공부","Keeps studying","繼續學習")]),
+  () => scene(["✏️",L("채점","Grading","批改")], ["📸",L("사진 한 장","One photo","一張照片"),"pop"], ["🔎",L("쪽 QR 코드 읽기","Page QR read","讀取頁面 QR 碼"),"spin"], ["🧒",L("누구의 몇 쪽인지 자동","Whose page, automatically","自動辨識是誰的哪一頁")], ["📕",L("오답 노트 재료","Review-note material","錯題本素材")]),
+  () => scene(["🧒",L("가입","Sign-up","入會")], ["📘",L("맞춤 책","Custom book","專屬的書")], ["🚚",L("배송","Delivery","配送")], ["👩‍🏫",L("수업","Lesson","上課")], ["🎉",L("끝!","Done!","完成！"),"pop"]),
 ];
 // 단계마다 실사 장면 사진(img/stepNN.jpg, tools/make_demo_images.py 로 만든다)과 한 줄 설명.
 const PHOTOS = [
@@ -220,32 +224,8 @@ const PHOTOS = [
   "채점한 쪽을 휴대폰으로 찍어 올리면, 쪽 아래 QR 코드로 누구의 어느 책 몇 쪽인지 자동으로 정리됩니다.",
   "가입부터 학생 손에 닿고, 수업 결과가 다음 교재로 이어지기까지 한 바퀴가 끝났습니다.",
 ];
-// ── 언어: 나레이션·자막·단계 제목·사진 설명만 바꾼다(화면 속 표·버튼·데이터는 한국어 그대로) ──
-const LANGS = {ko:"한국어", en:"English", "zh-TW":"繁體中文"}, VOICE_LANG = {ko:"ko-KR", en:"en-US", "zh-TW":"zh-TW"};
-let LANG = (() => { const q = new URLSearchParams(location.search).get("lang"); if(LANGS[q]) return q;
-  try{ const v = localStorage.getItem("harubook-lang"); if(LANGS[v]) return v; }catch(e){} return "ko"; })();
-const U = {
-  ko:{ai:"AI 생성 장면 · 실제 인물 아님", prep:n => `나레이션 음성을 준비하고 있습니다… (${n}개)`, run:"실행 중입니다…",
-      end:"시연을 마쳤습니다. ← 로 원하는 단계를 다시 볼 수 있습니다.", data:"시연 데이터를 준비하고 있습니다…",
-      pause:"⏸ 일시정지", cont:"▶ 계속", hintPaused:"<b>일시정지</b> · 스페이스로 계속", hintPlay:"스페이스 멈춤 · → 건너뛰기 · ← 앞 단계",
-      press:"→ 누르면", next:"→ 다음:", last:"마지막 단계입니다", play:"🔊 시연 시작"},
-  // 시작 창(한국어는 HTML 에 적힌 그대로 둔다)
-  en:{ai:"AI-generated scene · not real people", prep:n => `Loading narration audio… (${n})`, run:"Running…",
-      end:"The demo is over. Use ← to revisit any step.", data:"Preparing demo data…",
-      pause:"⏸ Pause", cont:"▶ Resume", hintPaused:"<b>Paused</b> · Space to resume", hintPlay:"Space pause · → skip · ← previous step",
-      press:"→ runs", next:"→ Next:", last:"This is the last step", play:"🔊 Start demo",
-      start:'<h3 id="start-title">🔊 Narrated demo</h3><p>Switches to full screen and runs to the end with narration. Space pauses, Esc stops.</p>',
-      fresh:"Start from the beginning<small>Reset the demo data and begin at step 1</small>",
-      resume:"Continue from here<small>Keep the data and start at the current step</small>", cancel:"Cancel"},
-  "zh-TW":{ai:"AI 生成畫面 · 非真實人物", prep:n => `正在準備旁白語音…（${n} 段）`, run:"執行中…",
-      end:"示範結束。可按 ← 回到任何步驟。", data:"正在準備示範資料…",
-      pause:"⏸ 暫停", cont:"▶ 繼續", hintPaused:"<b>已暫停</b> · 按空白鍵繼續", hintPlay:"空白鍵暫停 · → 略過 · ← 上一步",
-      press:"→ 執行", next:"→ 下一步：", last:"這是最後一步", play:"🔊 開始示範",
-      start:'<h3 id="start-title">🔊 旁白示範</h3><p>切換為全螢幕，並搭配旁白自動進行到最後。空白鍵暫停，Esc 結束。</p>',
-      fresh:"從頭開始<small>重設示範資料，從第 1 步開始</small>",
-      resume:"從目前位置繼續<small>保留資料，從目前的步驟開始</small>", cancel:"取消"}};
-const ui = k => U[LANG][k] ?? U.ko[k];
-let NARR = [];                      // 지금 언어의 대본(번역본에는 단계 제목·장·사진 설명도 들어 있다)
+// 언어(LANG·L·ui·trData)는 demo-i18n.js. 단계 제목·장·사진 설명·나레이션은 narration(.언어).json 에서 온다.
+let NARR = [];
 const tr = (i, k, ko) => (LANG !== "ko" && NARR[i]?.[k]) || ko;
 const titleOf = i => tr(i, "title", STEPS[i].title), chOf = i => tr(i, "ch", STEPS[i].ch), captionOf = i => tr(i, "caption", PHOTOS[i]);
 const audioDir = () => LANG === "ko" ? "audio/" : `audio/${LANG}/`;
@@ -253,16 +233,18 @@ async function loadLang(){
   try{ NARR = await (await fetch(LANG === "ko" ? "narration.json" : `narration.${LANG}.json`)).json(); }catch(e){ NARR = []; }
   document.documentElement.lang = LANG; const sel = document.querySelector("#lang"); if(sel) sel.value = LANG;
   const pb = document.querySelector("#play-on"); if(pb) pb.textContent = ui("play");
+  const rn = document.querySelector("#rec-note"); if(rn) rn.textContent = ui("rec");
+  document.querySelectorAll("#bar-rate option").forEach(o => o.textContent = `${Number(o.value).toFixed(o.value.length > 3 ? 2 : 1)}${L("배","×","倍")}`);
   document.querySelectorAll("[data-i18n]").forEach(el => { el.dataset.ko ??= el.innerHTML;
     el.innerHTML = LANG === "ko" ? el.dataset.ko : (U[LANG][el.dataset.i18n] ?? el.dataset.ko); }); }
 const photo = i => `<figure class="photo"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="${esc(captionOf(i))}" loading="lazy"><span class="ai">${esc(ui("ai"))}</span>
   <figcaption><b>${i+1}. ${esc(titleOf(i))}</b>${esc(captionOf(i))}</figcaption></figure>`;
-const flow = () => `<h3>전체 흐름 한눈에 — 사진을 누르면 그 단계로 갑니다</h3><div class="flow">${STEPS.map((s, i) =>
+const flow = () => `<h3>${L("전체 흐름 한눈에 — 사진을 누르면 그 단계로 갑니다","The whole flow at a glance: click a photo to jump to that step","整體流程一覽：點選照片即可跳到該步驟")}</h3><div class="flow">${STEPS.map((s, i) =>
   `<button data-go="${i}"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="" loading="lazy"><span><small>${i+1}. ${esc(chOf(i))}</small>${esc(titleOf(i))}</span></button>`).join("")}</div>`;
-// 여정 지도: 책이 지나가는 정거장 [이모지, 이름, 해당 단계들]
-const JOURNEY = [["🧒","가입",[0,1]],["📚","진도·원고",[2,3]],["⏰","컷오프",[4]],["🗂️","인쇄 순서",[5,6]],["🖨️","인쇄·제본",[7]],["📦","분류·포장",[8]],["🚚","배송",[9]],["👩‍🏫","수업 확인",[10,11,12]],["📸","채점 사진",[13]],["🎉","정리",[14]]];
+// 여정 지도: 책이 지나가는 정거장 [이모지, 이름(한·영·중), 해당 단계들]
+const JOURNEY = [["🧒",["가입","Sign-up","入會"],[0,1]],["📚",["진도·원고","Progress & content","進度・原稿"],[2,3]],["⏰",["컷오프","Cutoff","截單"],[4]],["🗂️",["인쇄 순서","Print order","印刷順序"],[5,6]],["🖨️",["인쇄·제본","Print & bind","印刷・裝訂"],[7]],["📦",["분류·포장","Sort & pack","分揀・包裝"],[8]],["🚚",["배송","Delivery","配送"],[9]],["👩‍🏫",["수업 확인","Lesson check","上課確認"],[10,11,12]],["📸",["채점 사진","Graded photo","批改照片"],[13]],["🎉",["정리","Summary","總結"],[14]]];
 const journey = () => { const now = JOURNEY.findIndex(j => j[2].includes(ctx.step));
-  return `<div class="card" style="padding:4px 8px"><div class="journey">${JOURNEY.map((j, i) => `<button class="stop ${i<now?"past":i===now?"now":""}" data-go="${j[2][0]}"><span class="ico">${j[0]}</span>${j[1]}</button>`).join("")}</div></div>`; };
+  return `<div class="card" style="padding:4px 8px"><div class="journey">${JOURNEY.map((j, i) => `<button class="stop ${i<now?"past":i===now?"now":""}" data-go="${j[2][0]}"><span class="ico">${j[0]}</span>${L(...j[1])}</button>`).join("")}</div></div>`; };
 const TEACHER_TINTS = ["#fde68a","#bfdbfe","#fecaca","#bbf7d0","#ddd6fe","#fed7aa"];
 async function student(){ return ctx.sid ? api(`/api/students/${ctx.sid}`) : null; }
 async function bookOf(cycleId){
@@ -271,202 +253,260 @@ async function bookOf(cycleId){
   const b = s.books.find(x => x.cycle_code === cyc.code && x.status !== "defect");
   return b ? api(`/api/books/${b.id}`) : null;
 }
-const bookCard = b => !b ? "" : `<div class="scroll"><table><tr><th>구성</th><th>호</th><th>쪽</th></tr>
-  <tr><td>표지(앞·주간 계획·확인란·뒤)</td><td></td><td>4</td></tr>
-  ${b.items.map(i => `<tr><td>${i.kind==="unit"?esc(i.subject_name):i.kind==="review"?"오답 노트":"메모(쪽수 맞춤)"}</td><td>${esc(i.title||"")}</td><td>${i.pages}</td></tr>`).join("")}
-  <tr class="me"><td>합계</td><td>${esc(b.title)}</td><td>${b.pages}쪽 = 대지 ${b.sheets}장</td></tr></table></div>`;
-function anatomy(code){ const p = [[code[0],"종류: 책"],[code.slice(1,5),"연도·주차"],[code.slice(5,11),"이번 주 일련번호"],[code[11],"재인쇄 차수"],[code.slice(12),"검증 숫자"]];
+const bookCard = b => !b ? "" : `<div class="scroll"><table><tr><th>${L("구성","Section","組成")}</th><th>${L("호","Issue","期數")}</th><th>${L("쪽","Pages","頁數")}</th></tr>
+  <tr><td>${L("표지(앞·주간 계획·확인란·뒤)","Cover (front, weekly plan, check box, back)","封面（正面・每週計畫・確認欄・背面）")}</td><td></td><td>4</td></tr>
+  ${b.items.map(i => `<tr><td>${i.kind==="unit"?esc(i.subject_name):i.kind==="review"?L("오답 노트","Review notes","錯題本"):L("메모(쪽수 맞춤)","Notes (page fill)","筆記頁（補足頁數）")}</td><td>${esc(i.title||"")}</td><td>${i.pages}</td></tr>`).join("")}
+  <tr class="me"><td>${L("합계","Total","合計")}</td><td>${esc(b.title)}</td><td>${L(`${b.pages}쪽 = 대지 ${b.sheets}장`, `${b.pages} pages = ${b.sheets} sheets`, `${b.pages} 頁 = ${b.sheets} 張大紙`)}</td></tr></table></div>`;
+function anatomy(code){ const p = [[code[0],L("종류: 책","Type: book","類型：書")],[code.slice(1,5),L("연도·주차","Year & week","年份・週次")],[code.slice(5,11),L("이번 주 일련번호","Serial this week","本週流水號")],[code[11],L("재인쇄 차수","Reprint count","重印次數")],[code.slice(12),L("검증 숫자","Check digit","檢查碼")]];
   return `<div class="code">${p.map(([v,l]) => `<span>${v}<small>${l}</small></span>`).join("")}</div>`; }
 async function sim(until){ return api(`/api/cycles/${ctx.c1}/simulate`, {until}); }
 async function openAndFreeze(key){ const c = await api("/api/cycles", {}); const st = await api(`/api/cycles/${c.id}/freeze`, {}); ctx[key] = c.id; ctx[key+"stats"] = st; ctx[key+"code"] = c.code; return st; }
 const need = (cond, text) => cond ? "" : `<div class="note warn">${text}</div>`;
+const needStudent = () => need(false, L("먼저 2단계에서 학생을 가입시켜 주세요.","First sign up a student in step 2.","請先在第 2 步讓學生入會。"));
+const needPlan = () => need(false, L("먼저 6단계에서 생산 계획을 세워 주세요.","First make the production plan in step 6.","請先在第 6 步建立生產計畫。"));
+const needDelivered = () => need(false, L("먼저 10단계에서 학생 전달까지 진행해 주세요.","First go as far as delivery to the student in step 10.","請先在第 10 步進行到交給學生。"));
+const MATH = ["수학","Math","數學"];
 
 const STEPS = [
 {ch:"회원과 교재 준비", title:"시연 준비", async view(){
   const m = META.counts;
-  return `<p class="lead">지금까지는 교재를 <b>미리 대량으로 찍어 두고</b> 학생마다 여러 과목에서 조금씩 뽑아 모았습니다. 이 시스템은 <b>학생의 수업 일정에 맞춰 그 주 분량만 찍어 한 권으로</b> 만들고, 찍혀 나온 순서 그대로 교사·지점·권역으로 내려보냅니다.</p>
-  <div class="why">이 시연은 실제 시스템을 그대로 움직입니다. 단계마다 버튼을 누르면 진짜 데이터가 바뀌고, 한 학생을 처음부터 끝까지 따라갑니다.</div>
-  <h3>조직은 이렇게 엮여 있습니다</h3>
-  <div class="chain"><div><small>🚚 배송 권역(노선)</small>${num(m.regions)}개</div><i>›</i><div><small>🗺️ 광역</small>${num(m.regions)}곳</div><i>›</i><div><small>🏢 지점</small>${num(m.branches)}곳</div><i>›</i><div><small>👩‍🏫 교사</small>${num(m.teachers)}명</div><i>›</i><div><small>🧒 학생</small>${num(m.students)}명</div></div>
-  <p class="mute">학생을 교사에게 맡기면 지점·광역·배송 권역은 교사의 소속을 따라 자동으로 정해집니다.</p>
-  <div class="row"><button class="b p" data-act="reset">시연 데이터로 처음부터 시작</button><span class="mute">지금 DB를 지우고 가상 학생 1,460명으로 다시 만듭니다.</span></div>
+  return `<p class="lead">${L(`지금까지는 교재를 <b>미리 대량으로 찍어 두고</b> 학생마다 여러 과목에서 조금씩 뽑아 모았습니다. 이 시스템은 <b>학생의 수업 일정에 맞춰 그 주 분량만 찍어 한 권으로</b> 만들고, 찍혀 나온 순서 그대로 교사·지점·권역으로 내려보냅니다.`,
+    `Until now, workbooks were <b>printed in bulk in advance</b>, and a few copies from each subject were picked for every student. This system <b>prints only that week's work, following each student's lesson schedule, as one book</b>, and sends it down to teachers, branches and routes in exactly the order it was printed.`,
+    `過去是把講義<b>事先大量印好</b>，再替每位學生從各科挑出幾本彙整。這套系統<b>依學生的上課進度，只把當週份量印成一本書</b>，並照印出的順序直接送到老師、分處與路線。`)}</p>
+  <div class="why">${L("이 시연은 실제 시스템을 그대로 움직입니다. 단계마다 버튼을 누르면 진짜 데이터가 바뀌고, 한 학생을 처음부터 끝까지 따라갑니다.",
+    "This demo runs the real system. Each button changes real data as we follow one student from start to finish.",
+    "這個示範直接操作實際系統。每一步按下按鈕，資料就會真的改變，我們從頭到尾跟著一位學生。")}</div>
+  <h3>${L("조직은 이렇게 엮여 있습니다","How the organization is linked","組織是這樣串起來的")}</h3>
+  <div class="chain"><div><small>🚚 ${L("배송 권역(노선)","Delivery routes","配送路線")}</small>${num(m.regions)}${L("개","","條")}</div><i>›</i><div><small>🗺️ ${L("광역","Regions","區域")}</small>${num(m.regions)}${L("곳","","個")}</div><i>›</i><div><small>🏢 ${L("지점","Branches","分處")}</small>${num(m.branches)}${L("곳","","個")}</div><i>›</i><div><small>👩‍🏫 ${L("교사","Teachers","老師")}</small>${num(m.teachers)}${L("명",""," 位")}</div><i>›</i><div><small>🧒 ${L("학생","Students","學生")}</small>${num(m.students)}${L("명",""," 位")}</div></div>
+  <p class="mute">${L("학생을 교사에게 맡기면 지점·광역·배송 권역은 교사의 소속을 따라 자동으로 정해집니다.","When a student is assigned to a teacher, the branch, region and delivery route follow the teacher automatically.","把學生交給一位老師，分處、區域和配送路線就會依老師的所屬自動確定。")}</p>
+  <div class="row"><button class="b p" data-act="reset">${L("시연 데이터로 처음부터 시작","Start over with demo data","用示範資料從頭開始")}</button><span class="mute">${L("지금 DB를 지우고 가상 학생 1,460명으로 다시 만듭니다.","Clears the database and rebuilds it with 1,460 fictional students.","清除資料庫，並以 1,460 位虛構學生重建。")}</span></div>
   ${flow()}
-  <p class="mute">사진은 이해를 돕기 위해 AI로 만든 장면입니다. 사람·장소·설비는 모두 지어낸 것이며 실제 고객사와 관계없습니다.</p>`; },
-  acts:{ async reset(){ if(!confirm("지금 DB의 모든 내용을 지우고 시연 데이터를 다시 만듭니다. 계속할까요?")) return; await api("/api/reset", {confirm:"RESET"}); ctx = {step:0, done:{0:true}}; META = await api("/api/meta"); msg = ["ok","처음 상태로 만들었습니다. 다음 단계로 넘어가세요."]; } } },
+  <p class="mute">${L("사진은 이해를 돕기 위해 AI로 만든 장면입니다. 사람·장소·설비는 모두 지어낸 것이며 실제 고객사와 관계없습니다.","The photos are AI-generated scenes for illustration. All people, places and equipment are made up and unrelated to any real client.","照片是為了說明而用 AI 生成的畫面。人物、場所與設備皆為虛構，與實際客戶無關。")}</p>`; },
+  acts:{ async reset(){ if(!confirm(L("지금 DB의 모든 내용을 지우고 시연 데이터를 다시 만듭니다. 계속할까요?","This clears everything in the database and rebuilds the demo data. Continue?","這會清除資料庫的所有內容並重建示範資料。要繼續嗎？"))) return; await api("/api/reset", {confirm:"RESET"}); ctx = {step:0, done:{0:true}}; META = await api("/api/meta"); msg = ["ok",L("처음 상태로 만들었습니다. 다음 단계로 넘어가세요.","Reset to the starting state. Go on to the next step.","已回到初始狀態。請進入下一步。")]; } } },
 
 {ch:"회원과 교재 준비", title:"신규 회원 가입", async view(){
   const [org, subjects, s] = await Promise.all([api("/api/org"), api("/api/subjects"), student()]);
-  if(s) return `<p class="lead"><b>${esc(s.name)}</b> 학생이 가입했습니다. 교사 한 명을 정했을 뿐인데 지점·광역·배송 권역까지 한 줄로 이어졌습니다.</p>${chain(s.chain)}
-    <div class="why">이 한 줄이 나중에 <b>인쇄 순서</b>가 됩니다. 권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍기 때문에, 찍혀 나온 책을 다시 분류할 필요가 없습니다.</div>`;
-  return `<p class="lead">새 학생이 들어왔습니다. 이름과 학년, 배울 과목과 시작할 호, 담당 교사와 방문 요일을 정합니다.</p>
-  <div class="row"><label>이름 <input id="j-name" value="한지우" style="width:110px"></label><label>학년 <select id="j-grade">${["7세","초1","초2","초3","초4","초5","초6"].map(g=>`<option ${g==="초2"?"selected":""}>${g}</option>`).join("")}</select></label>
-    <label>방문 요일 <select id="j-dow">${DOW.slice(0,6).map((d,i)=>`<option value="${i}" ${i===2?"selected":""}>${d}</option>`).join("")}</select></label></div>
-  <div class="row" style="margin-top:8px"><label>담당 교사 <select id="j-teacher">${org.map(t=>`<option value="${t.id}">${esc(t.route)} › ${esc(t.branch_name)} › ${esc(t.name)}</option>`).join("")}</select></label></div>
-  <h3>배울 과목과 시작 호</h3>
-  <div class="row">${subjects.map(sb=>`<label><input type="checkbox" data-subj="${sb.id}" ${["MAT","KOR"].includes(sb.code)?"checked":""}>${esc(sb.name)} <input type="number" data-seq="${sb.id}" value="${sb.code==="MAT"?3:5}" min="1" max="${sb.units}" style="width:64px">호부터</label>`).join("")}</div>
-  <div class="row" style="margin-top:12px"><button class="b p" data-act="join">가입 처리</button></div>`; },
+  if(s) return `<p class="lead">${L(`<b>${esc(s.name)}</b> 학생이 가입했습니다. 교사 한 명을 정했을 뿐인데 지점·광역·배송 권역까지 한 줄로 이어졌습니다.`,
+      `<b>${esc(s.name)}</b> has signed up. Choosing just one teacher linked the branch, region and delivery route in one chain.`,
+      `<b>${esc(s.name)}</b> 已入會。只選定了一位老師，分處、區域和配送路線就串成了一條線。`)}</p>${chain(s.chain)}
+    <div class="why">${L(`이 한 줄이 나중에 <b>인쇄 순서</b>가 됩니다. 권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍기 때문에, 찍혀 나온 책을 다시 분류할 필요가 없습니다.`,
+      `This chain later becomes the <b>print order</b>. Books are printed by route → branch → teacher → visit day → student, so printed books never need re-sorting.`,
+      `這條線之後就是<b>印刷順序</b>。依路線 → 分處 → 老師 → 到府星期 → 學生的順序印刷，印好的書就不必再分揀。`)}</div>`;
+  return `<p class="lead">${L("새 학생이 들어왔습니다. 이름과 학년, 배울 과목과 시작할 호, 담당 교사와 방문 요일을 정합니다.","A new student joins. We set the name and grade, the subjects and starting issues, the teacher and the visit day.","有新學生加入。設定姓名與年級、要學的科目與開始期數、負責老師與到府星期。")}</p>
+  <div class="row"><label>${L("이름","Name","姓名")} <input id="j-name" value="${L("한지우","Han Jiu","Han Jiu")}" style="width:110px"></label><label>${L("학년","Grade","年級")} <select id="j-grade">${["7세","초1","초2","초3","초4","초5","초6"].map(g=>`<option value="${g}" ${g==="초2"?"selected":""}>${esc(trStr(g))}</option>`).join("")}</select></label>
+    <label>${L("방문 요일","Visit day","到府星期")} <select id="j-dow">${DOW.slice(0,6).map((d,i)=>`<option value="${i}" ${i===2?"selected":""}>${dayOf(i)}</option>`).join("")}</select></label></div>
+  <div class="row" style="margin-top:8px"><label>${L("담당 교사","Teacher","負責老師")} <select id="j-teacher">${org.map(t=>`<option value="${t.id}">${esc(t.route)} › ${esc(t.branch_name)} › ${esc(t.name)}</option>`).join("")}</select></label></div>
+  <h3>${L("배울 과목과 시작 호","Subjects and starting issue","科目與開始期數")}</h3>
+  <div class="row">${subjects.map(sb=>`<label><input type="checkbox" data-subj="${sb.id}" ${["MAT","KOR"].includes(sb.code)?"checked":""}>${esc(sb.name)} ${L("","from No.","從第")} <input type="number" data-seq="${sb.id}" value="${sb.code==="MAT"?3:5}" min="1" max="${sb.units}" style="width:64px">${L("호부터",""," 期開始")}</label>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><button class="b p" data-act="join">${L("가입 처리","Sign up","辦理入會")}</button></div>`; },
   acts:{ async join(){ const enrollments = [...document.querySelectorAll("[data-subj]:checked")].map(c => ({subject_id:Number(c.dataset.subj), next_seq:Number($(`[data-seq="${c.dataset.subj}"]`).value)}));
     const r = await api("/api/students", {name:$("#j-name").value, grade:$("#j-grade").value, visit_dow:Number($("#j-dow").value), teacher_id:Number($("#j-teacher").value), enrollments});
-    ctx.sid = r.id; ctx.done[1] = true; msg = ["ok", `${r.name} 학생을 등록했습니다 (${r.code}).`]; } } },
+    ctx.sid = r.id; ctx.done[1] = true; msg = ["ok", L(`${r.name} 학생을 등록했습니다 (${r.code}).`, `Signed up ${r.name} (${r.code}).`, `已登錄 ${r.name}（${r.code}）。`)]; } } },
 
 {ch:"회원과 교재 준비", title:"개별 진도", async view(){
-  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
-  return `<p class="lead">학생마다 과목별로 <b>다음에 나갈 호</b>와 <b>주당 분량</b>이 따로 있습니다. 같은 학년이어도 진도는 모두 다릅니다.</p>
-  <div class="scroll"><table><tr><th>과목</th><th>다음 주에 나갈 호</th><th>쪽</th><th>주당</th><th>진도</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${e.units.map(u=>esc(u.title)).join(", ")||'<span class="mute">없음</span>'}</td><td>${e.units.reduce((a,u)=>a+u.pages,0)}</td><td>${e.units_per_week}호</td><td>${e.next_seq} / ${e.last_seq}호</td></tr>`).join("")}</table></div>
-  <div class="why">교사는 <b>컷오프(주문 마감) 전까지</b> 진도를 바꿀 수 있습니다: 복습(되돌리기), 건너뛰기, 주당 분량, 휴회, 중단. 바꾼 내용은 누가 언제 바꿨는지 모두 남습니다.</div>
-  <div class="row"><button class="b" data-act="pace">수학을 주 2호로 늘려 보기</button><button class="b" data-act="back">수학을 주 1호로 되돌리기</button></div>`; },
-  acts:{ async pace(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:2, actor:"시연"}); ctx.done[2] = true; msg = ["ok", `${e.subject_name} 주당 분량을 2호로 바꿨습니다. 위 표가 바뀐 것을 보세요.`]; },
-    async back(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:1, actor:"시연"}); ctx.done[2] = true; msg = ["ok", `${e.subject_name} 주당 분량을 1호로 되돌렸습니다.`]; } } },
+  const s = await student(); if(!s) return needStudent();
+  return `<p class="lead">${L(`학생마다 과목별로 <b>다음에 나갈 호</b>와 <b>주당 분량</b>이 따로 있습니다. 같은 학년이어도 진도는 모두 다릅니다.`,
+    `Each student has a <b>next issue</b> and a <b>weekly pace</b> for every subject. Even in the same grade, everyone's progress differs.`,
+    `每位學生的每個科目都有各自的<b>下一期</b>與<b>每週份量</b>。即使同年級，進度也都不同。`)}</p>
+  <div class="scroll"><table><tr><th>${L("과목","Subject","科目")}</th><th>${L("다음 주에 나갈 호","Issues for next week","下週的期數")}</th><th>${L("쪽","Pages","頁數")}</th><th>${L("주당","Per week","每週")}</th><th>${L("진도","Progress","進度")}</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${e.units.map(u=>esc(u.title)).join(", ")||`<span class="mute">${L("없음","None","無")}</span>`}</td><td>${e.units.reduce((a,u)=>a+u.pages,0)}</td><td>${L(`${e.units_per_week}호`, `${e.units_per_week}`, `${e.units_per_week} 期`)}</td><td>${L(`${e.next_seq} / ${e.last_seq}호`, `${e.next_seq} / ${e.last_seq}`, `${e.next_seq} / ${e.last_seq} 期`)}</td></tr>`).join("")}</table></div>
+  <div class="why">${L(`교사는 <b>컷오프(주문 마감) 전까지</b> 진도를 바꿀 수 있습니다: 복습(되돌리기), 건너뛰기, 주당 분량, 휴회, 중단. 바꾼 내용은 누가 언제 바꿨는지 모두 남습니다.`,
+    `Teachers can change progress <b>until the cutoff (order close)</b>: review (go back), skip, weekly pace, pause, stop. Every change records who made it and when.`,
+    `老師在<b>截單（訂單截止）前</b>都可以調整進度：複習（退回）、跳過、每週份量、暫停、停止。誰在何時修改都會留下紀錄。`)}</div>
+  <div class="row"><button class="b" data-act="pace">${L("수학을 주 2호로 늘려 보기","Raise math to 2 issues a week","把數學調成每週 2 期")}</button><button class="b" data-act="back">${L("수학을 주 1호로 되돌리기","Set math back to 1 a week","把數學改回每週 1 期")}</button></div>`; },
+  acts:{ async pace(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:2, actor:"시연"}); ctx.done[2] = true; msg = ["ok", L(`${e.subject_name} 주당 분량을 2호로 바꿨습니다. 위 표가 바뀐 것을 보세요.`, `${e.subject_name} is now 2 issues a week. See the table above change.`, `${e.subject_name}已改為每週 2 期。請看上方表格的變化。`)]; },
+    async back(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:1, actor:"시연"}); ctx.done[2] = true; msg = ["ok", L(`${e.subject_name} 주당 분량을 1호로 되돌렸습니다.`, `${e.subject_name} is back to 1 issue a week.`, `${e.subject_name}已改回每週 1 期。`)]; } } },
 
 {ch:"회원과 교재 준비", title:"교재 원고", async view(){
-  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
+  const s = await student(); if(!s) return needStudent();
   const units = s.plan.flatMap(e => e.units);
-  return `<p class="lead">교재 원고는 <b>호(한 주 분량)마다 PDF 하나</b>로 들어옵니다. 책을 만들 때 그 PDF의 1쪽, 2쪽…을 꺼내 얹기 때문에 미리 쪽 단위로 쪼개 둘 필요가 없습니다.</p>
-  <div class="scroll"><table><tr><th>이 학생이 다음에 받을 호</th><th>쪽</th><th>원고</th></tr>${units.map(u=>`<tr><td>${esc(u.title)}</td><td>${u.pages}</td><td>${u.asset_path?chip("원고 등록됨","ok"):chip("아직 없음 — 자리표시 쪽으로 나옴")}</td></tr>`).join("")}</table></div>
-  <div class="why">쪽수는 <b>원고가 기준</b>입니다. 원고를 붙이면 호의 쪽수가 원고에 맞춰집니다. 글꼴은 윤곽선으로 바뀐 상태로 받고, 학생 이름 같은 내용은 인쇄 때 따로 얹습니다.</div>
-  <div class="row"><button class="b p" data-act="assets" ${units.every(u=>u.asset_path)?"disabled":""}>이 호들에 견본 원고 붙이기</button><span class="mute">실제 원고 대신 견본 PDF를 만들어 붙입니다(호마다 1~2초).</span></div>`; },
-  acts:{ async assets(){ const s = await student(); let n = 0; for(const u of s.plan.flatMap(e => e.units)) if(!u.asset_path){ await api(`/api/units/${u.id}/sample`, {}); n++; } ctx.done[3] = true; msg = ["ok", `견본 원고 ${n}개를 붙였습니다.`]; } } },
+  return `<p class="lead">${L(`교재 원고는 <b>호(한 주 분량)마다 PDF 하나</b>로 들어옵니다. 책을 만들 때 그 PDF의 1쪽, 2쪽…을 꺼내 얹기 때문에 미리 쪽 단위로 쪼개 둘 필요가 없습니다.`,
+    `Content arrives as <b>one PDF per issue (one week's work)</b>. Pages 1, 2… are pulled from that PDF when the book is built, so nothing needs to be split into pages in advance.`,
+    `教材原稿<b>每一期（一週份量）是一個 PDF</b>。製書時從該 PDF 取出第 1、2 頁…置入，所以不必事先拆成單頁。`)}</p>
+  <div class="scroll"><table><tr><th>${L("이 학생이 다음에 받을 호","Issues this student gets next","這位學生下次會拿到的期數")}</th><th>${L("쪽","Pages","頁數")}</th><th>${L("원고","Content","原稿")}</th></tr>${units.map(u=>`<tr><td>${esc(u.title)}</td><td>${u.pages}</td><td>${u.asset_path?chip(L("원고 등록됨","Content attached","已登錄原稿"),"ok"):chip(L("아직 없음 — 자리표시 쪽으로 나옴","Not yet: placeholder pages are used","尚未登錄：以佔位頁輸出"))}</td></tr>`).join("")}</table></div>
+  <div class="why">${L(`쪽수는 <b>원고가 기준</b>입니다. 원고를 붙이면 호의 쪽수가 원고에 맞춰집니다. 글꼴은 윤곽선으로 바뀐 상태로 받고, 학생 이름 같은 내용은 인쇄 때 따로 얹습니다.`,
+    `<b>The content file sets the page count.</b> Attaching it adjusts the issue's page count to match. Fonts arrive outlined, and things like the student's name are added at print time.`,
+    `頁數<b>以原稿為準</b>。附上原稿後，該期頁數會跟著原稿調整。字型以轉外框的狀態接收，學生姓名等內容在印刷時另外套印。`)}</div>
+  <div class="row"><button class="b p" data-act="assets" ${units.every(u=>u.asset_path)?"disabled":""}>${L("이 호들에 견본 원고 붙이기","Attach sample content to these issues","為這些期數附上範例原稿")}</button><span class="mute">${L("실제 원고 대신 견본 PDF를 만들어 붙입니다(호마다 1~2초).","Makes and attaches sample PDFs instead of real content (1–2 s per issue).","以範例 PDF 代替實際原稿（每期約 1～2 秒）。")}</span></div>`; },
+  acts:{ async assets(){ const s = await student(); let n = 0; for(const u of s.plan.flatMap(e => e.units)) if(!u.asset_path){ await api(`/api/units/${u.id}/sample`, {}); n++; } ctx.done[3] = true; msg = ["ok", L(`견본 원고 ${n}개를 붙였습니다.`, `Attached ${n} sample files.`, `已附上 ${n} 份範例原稿。`)]; } } },
 
 {ch:"주문에서 인쇄까지", title:"컷오프 — 주문 확정과 코드", async view(){
-  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
-  if(!ctx.c1) return `<p class="lead">매주 정해진 시각(방문 주 ${META.cutoff.days_before_week}일 전 ${META.cutoff.hour}시)에 <b>컷오프</b>를 합니다. 그 순간의 진도대로 학생마다 그 주에 받을 책이 확정됩니다.</p>
-    <div class="why">확정된 책은 바뀌지 않습니다. 컷오프 뒤에 바꾼 진도는 다음 주에 반영됩니다. 그래야 공장이 흔들리지 않습니다.</div>
-    <div class="row"><button class="b p" data-act="freeze">다음 주 사이클을 열고 주문 확정</button></div>`;
+  const s = await student(); if(!s) return needStudent();
+  if(!ctx.c1) return `<p class="lead">${L(`매주 정해진 시각(방문 주 ${META.cutoff.days_before_week}일 전 ${META.cutoff.hour}시)에 <b>컷오프</b>를 합니다. 그 순간의 진도대로 학생마다 그 주에 받을 책이 확정됩니다.`,
+      `Every week at a set time (${META.cutoff.days_before_week} days before the visit week, ${META.cutoff.hour}:00) we run the <b>cutoff</b>. Each student's book for that week is fixed by their progress at that moment.`,
+      `每週在固定時間（到府週的 ${META.cutoff.days_before_week} 天前 ${META.cutoff.hour} 點）進行<b>截單</b>。依當下的進度，確定每位學生該週要拿到的書。`)}</p>
+    <div class="why">${L("확정된 책은 바뀌지 않습니다. 컷오프 뒤에 바꾼 진도는 다음 주에 반영됩니다. 그래야 공장이 흔들리지 않습니다.","Fixed books don't change. Progress changed after the cutoff applies the following week, so the factory plan stays stable.","已確定的書不會再變。截單後修改的進度會反映在下一週，工廠才不會被打亂。")}</div>
+    <div class="row"><button class="b p" data-act="freeze">${L("다음 주 사이클을 열고 주문 확정","Open next week's cycle and fix orders","開啟下週週期並確定訂單")}</button></div>`;
   const b = await bookOf(ctx.c1), st = ctx.c1stats;
-  return `<p class="lead"><b>${ctx.c1code}</b> 주문이 확정됐습니다. 학생 ${num(st.students)}명에게 책 ${num(st.books)}권, 모두 ${num(st.pages)}쪽입니다.</p>
-  <h3>${esc(s.name)} 학생의 책</h3>${bookCard(b)}
-  <div class="why">여러 과목을 <b>한 권으로 합칩니다</b>. 중철 제본이라 쪽수는 4의 배수여야 해서, 모자라면 메모 쪽을 넣어 맞춥니다.</div>
-  <h3>주문이 코드가 됩니다</h3>${b?anatomy(b.code):""}
-  <p class="mute">이 코드가 책 표지와 뒤표지에 QR 코드로 찍히고, 공장에서 학생 손까지 모든 단계에서 스캔됩니다. 코드에는 개인정보가 없습니다. 검증 숫자가 있어 잘못 읽으면 바로 걸러집니다.</p>`; },
-  acts:{ async freeze(){ const st = await openAndFreeze("c1"); ctx.done[4] = true; msg = ["ok", `책 ${num(st.books)}권을 확정했습니다.`]; } } },
+  return `<p class="lead">${L(`<b>${ctx.c1code}</b> 주문이 확정됐습니다. 학생 ${num(st.students)}명에게 책 ${num(st.books)}권, 모두 ${num(st.pages)}쪽입니다.`,
+    `Orders for <b>${ctx.c1code}</b> are fixed: ${num(st.books)} books for ${num(st.students)} students, ${num(st.pages)} pages in total.`,
+    `<b>${ctx.c1code}</b> 的訂單已確定：${num(st.students)} 位學生、${num(st.books)} 本書，共 ${num(st.pages)} 頁。`)}</p>
+  <h3>${L(`${esc(s.name)} 학생의 책`, `${esc(s.name)}'s book`, `${esc(s.name)} 的書`)}</h3>${bookCard(b)}
+  <div class="why">${L(`여러 과목을 <b>한 권으로 합칩니다</b>. 중철 제본이라 쪽수는 4의 배수여야 해서, 모자라면 메모 쪽을 넣어 맞춥니다.`,
+    `Several subjects are <b>combined into one book</b>. Saddle stitching needs a multiple of 4 pages, so note pages fill any gap.`,
+    `多個科目<b>合成一本書</b>。騎馬釘裝訂的頁數必須是 4 的倍數，不足時加入筆記頁補齊。`)}</div>
+  <h3>${L("주문이 코드가 됩니다","The order becomes a code","訂單變成代碼")}</h3>${b?anatomy(b.code):""}
+  <p class="mute">${L("이 코드가 책 표지와 뒤표지에 QR 코드로 찍히고, 공장에서 학생 손까지 모든 단계에서 스캔됩니다. 코드에는 개인정보가 없습니다. 검증 숫자가 있어 잘못 읽으면 바로 걸러집니다.",
+    "This code is printed as a QR code on the front and back covers and scanned at every step from the factory to the student. It holds no personal data, and its check digit catches misreads.",
+    "這個代碼以 QR 碼印在封面與封底，從工廠到學生手上的每個環節都會掃描。代碼不含個人資料，並有檢查碼，讀錯時會立即被擋下。")}</p>`; },
+  acts:{ async freeze(){ const st = await openAndFreeze("c1"); ctx.done[4] = true; msg = ["ok", L(`책 ${num(st.books)}권을 확정했습니다.`, `Fixed ${num(st.books)} books.`, `已確定 ${num(st.books)} 本書。`)]; } } },
 
 {ch:"주문에서 인쇄까지", title:"생산 계획 — 인쇄 순서가 분류 순서", async view(){
-  if(!ctx.c1) return need(false, "먼저 5단계에서 주문을 확정해 주세요.");
+  if(!ctx.c1) return need(false, L("먼저 5단계에서 주문을 확정해 주세요.","First fix the orders in step 5.","請先在第 5 步確定訂單。"));
   const b = await bookOf(ctx.c1);
-  if(!b || !b.batch_id) return `<p class="lead">확정된 책을 <b>배송 권역 → 지점(내리는 순서) → 교사 → 방문 요일 → 학생</b> 순으로 줄 세웁니다. 이 순서대로 찍으면 제본기에서 나오는 책이 이미 교사별로 모여 있습니다.</p>
-    <div class="why">예전에는 다 찍은 뒤에 사람이 학생별·교사별로 모았습니다. 이제는 <b>모으는 일이 없고, 교사 경계에서 끊어 담기만</b> 합니다.</div>
-    <div class="row"><button class="b p" data-act="plan">생산 계획 세우기</button></div>`;
-  return `<p class="lead">계획이 섰습니다. ${esc(b.student_name)} 학생의 책이 어디에 놓였는지 보세요.</p>
-  <div class="chain"><div><small>🖨️ 인쇄 배치</small><span class="mono">${b.batch_code}</span><small>${b.seq_in_batch}번째로 인쇄</small></div><i>→</i><div><small>🧺 교사 묶음</small>${esc(b.teacher_name)}<small>${b.pack_seq} / ${b.pack_expected}번째 · <span class="mono">${b.pack_code}</span></small></div><i>→</i><div><small>📦 지점 박스</small>${esc(b.branch_name)}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 배송 권역</small>${esc(b.route)}</div></div>
-  <h3>제본기에서 나오는 순서 그대로 (색 = 교사)</h3>
+  if(!b || !b.batch_id) return `<p class="lead">${L(`확정된 책을 <b>배송 권역 → 지점(내리는 순서) → 교사 → 방문 요일 → 학생</b> 순으로 줄 세웁니다. 이 순서대로 찍으면 제본기에서 나오는 책이 이미 교사별로 모여 있습니다.`,
+      `Fixed books are lined up by <b>route → branch (drop order) → teacher → visit day → student</b>. Printed in this order, books leave the binder already grouped by teacher.`,
+      `把確定的書依<b>路線 → 分處（卸貨順序）→ 老師 → 到府星期 → 學生</b>排序。照這個順序印，從裝訂機出來的書就已經依老師分好。`)}</p>
+    <div class="why">${L(`예전에는 다 찍은 뒤에 사람이 학생별·교사별로 모았습니다. 이제는 <b>모으는 일이 없고, 교사 경계에서 끊어 담기만</b> 합니다.`,
+      `Before, people gathered books by student and teacher after printing. Now <b>there is no gathering; you just cut where the teacher changes</b>.`,
+      `過去是印完後由人工依學生、老師彙整。現在<b>不必彙整，只要在換老師的地方分開裝</b>。`)}</div>
+    <div class="row"><button class="b p" data-act="plan">${L("생산 계획 세우기","Make the production plan","建立生產計畫")}</button></div>`;
+  return `<p class="lead">${L(`계획이 섰습니다. ${esc(b.student_name)} 학생의 책이 어디에 놓였는지 보세요.`, `The plan is ready. See where ${esc(b.student_name)}'s book landed.`, `計畫完成。來看看 ${esc(b.student_name)} 的書被排在哪裡。`)}</p>
+  <div class="chain"><div><small>🖨️ ${L("인쇄 배치","Print batch","印刷批次")}</small><span class="mono">${b.batch_code}</span><small>${L(`${b.seq_in_batch}번째로 인쇄`, `Printed #${b.seq_in_batch}`, `第 ${b.seq_in_batch} 本印刷`)}</small></div><i>→</i><div><small>🧺 ${L("교사 묶음","Teacher bundle","老師套組")}</small>${esc(b.teacher_name)}<small>${L(`${b.pack_seq} / ${b.pack_expected}번째`, `${b.pack_seq} of ${b.pack_expected}`, `第 ${b.pack_seq} / ${b.pack_expected} 本`)} · <span class="mono">${b.pack_code}</span></small></div><i>→</i><div><small>📦 ${L("지점 박스","Branch box","分處箱")}</small>${esc(b.branch_name)}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 ${L("배송 권역","Route","配送路線")}</small>${esc(b.route)}</div></div>
+  <h3>${L("제본기에서 나오는 순서 그대로 (색 = 교사)","In the order books leave the binder (color = teacher)","依裝訂機出書的順序（顏色 = 老師）")}</h3>
   <div class="tiles">${(() => { const tint = {}; let last = null, html = "";
     for(const n of b.neighbors){ tint[n.teacher_name] ??= TEACHER_TINTS[Object.keys(tint).length % TEACHER_TINTS.length];
-      if(last !== null && last !== n.teacher_name) html += `<div class="tile slip"><b>📄</b>묶음표<br>(교사 바뀜)</div>`;
+      if(last !== null && last !== n.teacher_name) html += `<div class="tile slip"><b>📄</b>${L("묶음표<br>(교사 바뀜)","Bundle slip<br>(new teacher)","套組單<br>（換老師）")}</div>`;
       last = n.teacher_name;
-      html += `<div class="tile ${n.id===b.id?"me":""}" style="background:${tint[n.teacher_name]};color:#1d1f24"><b>${n.id===b.id?"⭐":"📘"}</b>${esc(n.student_name)}<br>${DOW[n.visit_dow]}요일 · ${n.seq_in_batch}번</div>`; }
+      html += `<div class="tile ${n.id===b.id?"me":""}" style="background:${tint[n.teacher_name]};color:#1d1f24"><b>${n.id===b.id?"⭐":"📘"}</b>${esc(n.student_name)}<br>${L(`${dayOf(n.visit_dow)}요일 · ${n.seq_in_batch}번`, `${dayOf(n.visit_dow)} · #${n.seq_in_batch}`, `${dayOf(n.visit_dow)} · 第 ${n.seq_in_batch} 本`)}</div>`; }
     return html; })()}</div>
-  <p class="mute">⭐ 이 우리 학생입니다. 같은 색(같은 교사)끼리 이미 붙어서 나오므로, 색이 바뀌는 자리에서 끊어 담기만 하면 됩니다.</p>
-  <h3>인쇄 순서에서 앞뒤에 놓인 책</h3><div class="scroll"><table><tr><th>인쇄 순번</th><th>지점</th><th>교사</th><th>방문</th><th>학생</th><th>묶음 안 순번</th></tr>${b.neighbors.filter(n => Math.abs(n.seq_in_batch - b.seq_in_batch) <= 3).map(n=>`<tr class="${n.id===b.id?"me":""}"><td>${n.seq_in_batch}</td><td>${esc(n.branch_name)}</td><td>${esc(n.teacher_name)}</td><td>${DOW[n.visit_dow]}</td><td>${esc(n.student_name)}</td><td>${n.pack_seq}</td></tr>`).join("")}</table></div>
-  <p class="mute">같은 교사의 학생이 방문 요일 순으로 나란히 있습니다. 교사가 바뀌는 자리에는 묶음표(간지)가 한 장 들어갑니다.</p>`; },
-  acts:{ async plan(){ const r = await api(`/api/cycles/${ctx.c1}/plan`, {}); ctx.done[5] = true; msg = ["ok", `인쇄 배치 ${r.batches}개 · 교사 묶음 ${r.packs}개 · 지점 박스 ${r.boxes}개 · 권역 ${r.routes}개로 편성했습니다.`]; } } },
+  <p class="mute">${L("⭐ 이 우리 학생입니다. 같은 색(같은 교사)끼리 이미 붙어서 나오므로, 색이 바뀌는 자리에서 끊어 담기만 하면 됩니다.","⭐ is our student. Books of the same color (same teacher) already come out together, so just cut where the color changes.","⭐ 是我們的學生。同顏色（同一位老師）的書已經連在一起出來，只要在顏色改變的地方分開裝即可。")}</p>
+  <h3>${L("인쇄 순서에서 앞뒤에 놓인 책","Books just before and after in the print order","印刷順序中前後的書")}</h3><div class="scroll"><table><tr><th>${L("인쇄 순번","Print #","印刷序號")}</th><th>${L("지점","Branch","分處")}</th><th>${L("교사","Teacher","老師")}</th><th>${L("방문","Visit","到府")}</th><th>${L("학생","Student","學生")}</th><th>${L("묶음 안 순번","# in bundle","套組內序號")}</th></tr>${b.neighbors.filter(n => Math.abs(n.seq_in_batch - b.seq_in_batch) <= 3).map(n=>`<tr class="${n.id===b.id?"me":""}"><td>${n.seq_in_batch}</td><td>${esc(n.branch_name)}</td><td>${esc(n.teacher_name)}</td><td>${dayOf(n.visit_dow)}</td><td>${esc(n.student_name)}</td><td>${n.pack_seq}</td></tr>`).join("")}</table></div>
+  <p class="mute">${L("같은 교사의 학생이 방문 요일 순으로 나란히 있습니다. 교사가 바뀌는 자리에는 묶음표(간지)가 한 장 들어갑니다.","One teacher's students sit side by side in visit-day order. A bundle slip (separator sheet) goes in wherever the teacher changes.","同一位老師的學生依到府星期排在一起。換老師的地方會插入一張套組單（隔頁紙）。")}</p>`; },
+  acts:{ async plan(){ const r = await api(`/api/cycles/${ctx.c1}/plan`, {}); ctx.done[5] = true; msg = ["ok", L(`인쇄 배치 ${r.batches}개 · 교사 묶음 ${r.packs}개 · 지점 박스 ${r.boxes}개 · 권역 ${r.routes}개로 편성했습니다.`, `Planned ${r.batches} print batches · ${r.packs} teacher bundles · ${r.boxes} branch boxes · ${r.routes} routes.`, `已編成 ${r.batches} 個印刷批次 · ${r.packs} 個老師套組 · ${r.boxes} 個分處箱 · ${r.routes} 條路線。`)]; } } },
 
 {ch:"주문에서 인쇄까지", title:"인쇄 데이터", async view(){
-  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return needPlan();
   const w = META.web;
-  return `<p class="lead">이제 이 학생만을 위한 PDF가 만들어집니다. 표지에 이름과 이번 주 구성, 배송 분류 정보와 QR 코드가 들어가고, 본문에는 원고가 그대로 얹힙니다.</p>
-  <div class="row"><button class="b p" data-pdf="book" data-id="${b.id}">책 PDF 보기</button><button class="b" data-pdf="imposed" data-id="${b.id}">인쇄용 터잡기 PDF 보기</button><button class="b" data-pdf="pack" data-id="${b.pack_id}">교사 묶음표 보기</button></div>
-  <div class="why">롤 용지(폭 ${w.web_mm}mm, 인쇄 가능 ${w.printable_mm}mm)에 펼친 면을 ${w.rotated?"돌려서 ":""}${w.lanes}줄로 앉히고, 재단용 여백을 사방 ${w.bleed_mm}mm 둡니다. 본문 쪽마다 아래에 책 코드와 쪽 번호가 작게 찍혀 낱장이 빠지거나 섞이면 알 수 있습니다.</div>
-  <p class="mute">뒤표지에는 권역·지점·교사·방문일·묶음 순번이 크게 찍혀, 스캐너가 없어도 손으로 나눌 수 있습니다.</p>`; },
+  return `<p class="lead">${L("이제 이 학생만을 위한 PDF가 만들어집니다. 표지에 이름과 이번 주 구성, 배송 분류 정보와 QR 코드가 들어가고, 본문에는 원고가 그대로 얹힙니다.",
+    "Now a PDF is made just for this student. The cover carries the name, this week's contents, sorting information and a QR code; the body places the content pages as they are.",
+    "現在為這位學生製作專屬 PDF。封面有姓名、本週內容、配送分揀資訊與 QR 碼，內頁則直接置入原稿。")}</p>
+  <div class="row"><button class="b p" data-pdf="book" data-id="${b.id}">${L("책 PDF 보기","View book PDF","查看書的 PDF")}</button><button class="b" data-pdf="imposed" data-id="${b.id}">${L("인쇄용 터잡기 PDF 보기","View imposed print PDF","查看印刷用拼版 PDF")}</button><button class="b" data-pdf="pack" data-id="${b.pack_id}">${L("교사 묶음표 보기","View teacher bundle slip","查看老師套組單")}</button></div>
+  <div class="why">${L(`롤 용지(폭 ${w.web_mm}mm, 인쇄 가능 ${w.printable_mm}mm)에 펼친 면을 ${w.rotated?"돌려서 ":""}${w.lanes}줄로 앉히고, 재단용 여백을 사방 ${w.bleed_mm}mm 둡니다. 본문 쪽마다 아래에 책 코드와 쪽 번호가 작게 찍혀 낱장이 빠지거나 섞이면 알 수 있습니다.`,
+    `Spreads are placed ${w.rotated?"rotated, ":""}in ${w.lanes} lane(s) on the paper roll (${w.web_mm} mm wide, ${w.printable_mm} mm printable), with ${w.bleed_mm} mm bleed on every side. Each body page carries the book code and page number in small print at the bottom, so a missing or mixed-up sheet is noticed.`,
+    `在捲筒紙（寬 ${w.web_mm}mm，可印 ${w.printable_mm}mm）上${w.rotated?"旋轉後":""}以 ${w.lanes} 列排放跨頁，四邊各留 ${w.bleed_mm}mm 出血。每一頁內頁下方都印有小小的書代碼與頁碼，缺頁或混頁時就能察覺。`)}</div>
+  <p class="mute">${L("뒤표지에는 권역·지점·교사·방문일·묶음 순번이 크게 찍혀, 스캐너가 없어도 손으로 나눌 수 있습니다.","The back cover shows the route, branch, teacher, visit day and bundle position in large type, so books can be sorted by hand even without a scanner.","封底以大字印出路線、分處、老師、到府日與套組序號，即使沒有掃描器也能用手分揀。")}</p>`; },
   acts:{} },
 
 {ch:"주문에서 인쇄까지", title:"인쇄와 제본 검수", async view(){
-  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
-  return `<p class="lead">인쇄하고 중철로 묶은 뒤, 책마다 QR 코드를 한 번 읽습니다. 이것이 <b>제본 검수</b>입니다.</p>
-  <p>${esc(b.student_name)} 학생의 책: ${stat(b.status)}</p>
-  <div class="why">인쇄 순서대로 나와야 하므로, <b>건너뛴 책이 있으면 그 자리에서 경고</b>합니다. 빠진 책을 출고 직전이 아니라 제본기 앞에서 알게 됩니다. 불량이면 "불량 등록"을 하고, 재인쇄본이 급행으로 다시 찍혀 같은 묶음 자리로 돌아옵니다.</div>
-  <div class="row"><button class="b p" data-act="bind" ${["planned","printed"].includes(b.status)?"":"disabled"}>인쇄하고 제본 검수까지 진행</button><span class="mute">이번 주 책 전체를 실제 스캔 규칙으로 처리합니다(몇 초 걸립니다).</span></div>`; },
-  acts:{ async bind(){ const r = await sim("bind"); ctx.done[7] = true; msg = ["ok", `${num(r.print)}권 인쇄, ${num(r.bind)}권 검수 완료.`]; } } },
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return needPlan();
+  return `<p class="lead">${L(`인쇄하고 중철로 묶은 뒤, 책마다 QR 코드를 한 번 읽습니다. 이것이 <b>제본 검수</b>입니다.`, `After printing and saddle stitching, each book's QR code is read once. This is the <b>binding check</b>.`, `印刷並以騎馬釘裝訂後，每本書讀取一次 QR 碼。這就是<b>裝訂檢驗</b>。`)}</p>
+  <p>${L(`${esc(b.student_name)} 학생의 책:`, `${esc(b.student_name)}'s book:`, `${esc(b.student_name)} 的書：`)} ${stat(b.status)}</p>
+  <div class="why">${L(`인쇄 순서대로 나와야 하므로, <b>건너뛴 책이 있으면 그 자리에서 경고</b>합니다. 빠진 책을 출고 직전이 아니라 제본기 앞에서 알게 됩니다. 불량이면 "불량 등록"을 하고, 재인쇄본이 급행으로 다시 찍혀 같은 묶음 자리로 돌아옵니다.`,
+    `Books must come out in print order, so <b>a skipped book triggers a warning on the spot</b>. A missing book is caught at the binder, not just before shipping. A defective book is logged, and an express reprint returns to the same place in its bundle.`,
+    `書必須依印刷順序出來，所以<b>只要漏了一本，當場就會警告</b>。缺書在裝訂機前就會發現，而不是出貨前。不良品登記後會以急件重印，送回同一個套組位置。`)}</div>
+  <div class="row"><button class="b p" data-act="bind" ${["planned","printed"].includes(b.status)?"":"disabled"}>${L("인쇄하고 제본 검수까지 진행","Print and run the binding check","進行印刷與裝訂檢驗")}</button><span class="mute">${L("이번 주 책 전체를 실제 스캔 규칙으로 처리합니다(몇 초 걸립니다).","Processes all of this week's books with the real scan rules (takes a few seconds).","以實際掃描規則處理本週所有的書（需要幾秒鐘）。")}</span></div>`; },
+  acts:{ async bind(){ const r = await sim("bind"); ctx.done[7] = true; msg = ["ok", L(`${num(r.print)}권 인쇄, ${num(r.bind)}권 검수 완료.`, `${num(r.print)} books printed, ${num(r.bind)} checked.`, `已印刷 ${num(r.print)} 本，檢驗完成 ${num(r.bind)} 本。`)]; } } },
 
 {ch:"아래로 내려보내기", title:"교사 묶음 · 지점 박스 · 권역 상차", async view(){
-  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return needPlan();
   const look = b.box_code ? await api(`/api/lookup?code=${b.box_code}`).catch(()=>null) : null;
-  return `<p class="lead">이제 위에서 정한 줄을 거꾸로 타고 내려갑니다: 책을 <b>교사 묶음</b>에, 묶음을 <b>지점 박스</b>에, 박스를 <b>권역 차량</b>에 싣습니다. 단계마다 QR 코드를 읽습니다.</p>
-  <div class="chain"><div><small>📘 책</small>${stat(b.status)}<small class="mono">${b.code}</small></div><i>→</i><div><small>🧺 교사 묶음</small>${esc(b.teacher_name)}<small class="mono">${b.pack_code}</small></div><i>→</i><div><small>📦 지점 박스</small>${esc(b.branch_name)} ${look?chip(META.status[look.status]||look.status, look.status==="open"?"warn":"ok"):""}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 배송 권역</small>${esc(b.route)}<small>${look&&look.waybill?`운송장 ${esc(look.waybill)}`:"아직 상차 전"}</small></div></div>
-  <div class="why"><b>틀리면 그 자리에서 막습니다.</b> 다른 교사의 책을 묶음에 넣으면 스캔이 거부되고 어디로 보내야 하는지 알려 줍니다. 덜 찬 묶음은 박스에 못 넣고, 덜 찬 박스는 차에 못 싣습니다.</div>
-  ${ctx.wrong?`<div class="note bad">거부됨 — ${esc(ctx.wrong)}</div>`:""}
-  <div class="row"><button class="b" data-act="wrong" ${b.status==="bound"?"":"disabled"}>일부러 다른 교사 묶음에 넣어 보기</button><button class="b p" data-act="load" ${["bound","packed"].includes(b.status)?"":"disabled"}>묶음 포장 → 박스 → 상차까지 진행</button></div>
-  ${b.status==="printed"||b.status==="planned"?need(false,"먼저 8단계에서 제본 검수까지 진행해 주세요."):""}`; },
+  return `<p class="lead">${L(`이제 위에서 정한 줄을 거꾸로 타고 내려갑니다: 책을 <b>교사 묶음</b>에, 묶음을 <b>지점 박스</b>에, 박스를 <b>권역 차량</b>에 싣습니다. 단계마다 QR 코드를 읽습니다.`,
+    `Now we follow the chain back down: books into <b>teacher bundles</b>, bundles into <b>branch boxes</b>, boxes onto <b>route trucks</b>. A QR code is read at every step.`,
+    `現在沿著前面那條線往下走：書裝進<b>老師套組</b>，套組裝進<b>分處箱</b>，箱子裝上<b>路線貨車</b>。每一步都讀取 QR 碼。`)}</p>
+  <div class="chain"><div><small>📘 ${L("책","Book","書")}</small>${stat(b.status)}<small class="mono">${b.code}</small></div><i>→</i><div><small>🧺 ${L("교사 묶음","Teacher bundle","老師套組")}</small>${esc(b.teacher_name)}<small class="mono">${b.pack_code}</small></div><i>→</i><div><small>📦 ${L("지점 박스","Branch box","分處箱")}</small>${esc(b.branch_name)} ${look?chip(META.status[look.status]||look.status, look.status==="open"?"warn":"ok"):""}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 ${L("배송 권역","Route","配送路線")}</small>${esc(b.route)}<small>${look&&look.waybill?L(`운송장 ${esc(look.waybill)}`, `Waybill ${esc(look.waybill)}`, `運單 ${esc(look.waybill)}`):L("아직 상차 전","Not loaded yet","尚未裝車")}</small></div></div>
+  <div class="why">${L(`<b>틀리면 그 자리에서 막습니다.</b> 다른 교사의 책을 묶음에 넣으면 스캔이 거부되고 어디로 보내야 하는지 알려 줍니다. 덜 찬 묶음은 박스에 못 넣고, 덜 찬 박스는 차에 못 싣습니다.`,
+    `<b>Mistakes are blocked on the spot.</b> Putting another teacher's book in a bundle is rejected at scan, with a note on where it belongs. An incomplete bundle can't go in a box, and an incomplete box can't go on the truck.`,
+    `<b>出錯當場就擋下。</b>把別位老師的書放進套組，掃描會被拒絕，並告訴你該送到哪裡。沒裝滿的套組不能放進箱子，沒裝滿的箱子不能上車。`)}</div>
+  ${ctx.wrong?`<div class="note bad">${L("거부됨","Rejected","已拒絕")} — ${esc(trStr(ctx.wrong))}</div>`:""}
+  <div class="row"><button class="b" data-act="wrong" ${b.status==="bound"?"":"disabled"}>${L("일부러 다른 교사 묶음에 넣어 보기","Try putting it in another teacher's bundle","故意放進別位老師的套組")}</button><button class="b p" data-act="load" ${["bound","packed"].includes(b.status)?"":"disabled"}>${L("묶음 포장 → 박스 → 상차까지 진행","Bundle → box → load the truck","套組包裝 → 裝箱 → 裝車")}</button></div>
+  ${b.status==="printed"||b.status==="planned"?need(false,L("먼저 8단계에서 제본 검수까지 진행해 주세요.","First run the binding check in step 8.","請先在第 8 步進行到裝訂檢驗。")):""}`; },
   acts:{ async wrong(){ const b = await bookOf(ctx.c1); const tree = await api(`/api/cycles/${ctx.c1}/tree`);
       const other = tree.flatMap(r => r.boxes).flatMap(x => x.packs).find(p => p.code !== b.pack_code && p.status === "open");
-      const r = await api("/api/scan", {station:"pack", code:b.code, context:other.code, operator:"시연"}); ctx.wrong = r.message; msg = [r.ok?"ok":"bad", r.ok?"들어가 버렸습니다(예상 밖).":`스캔 거부: ${r.message}`]; },
-    async load(){ const r = await sim("load"); ctx.done[8] = true; msg = ["ok", `책 ${num(r.pack)}권을 묶음 ${num(r.box)}개에 담고, 박스 ${num(r.load)}개를 실었습니다.`]; } } },
+      const r = await apiRaw("/api/scan", {station:"pack", code:b.code, context:other.code, operator:"시연"}); ctx.wrong = r.message;   // 원문으로 둔다(언어를 바꿔도 다시 번역)
+      msg = [r.ok?"ok":"bad", r.ok?L("들어가 버렸습니다(예상 밖).","It went in (unexpected).","竟然放進去了（意料之外）。"):`${L("스캔 거부","Scan rejected","掃描被拒絕")}: ${trStr(r.message)}`]; },
+    async load(){ const r = await sim("load"); ctx.done[8] = true; msg = ["ok", L(`책 ${num(r.pack)}권을 묶음 ${num(r.box)}개에 담고, 박스 ${num(r.load)}개를 실었습니다.`, `Packed ${num(r.pack)} books into ${num(r.box)} bundles and loaded ${num(r.load)} boxes.`, `已把 ${num(r.pack)} 本書裝進 ${num(r.box)} 個套組，並裝載 ${num(r.load)} 個箱子。`)]; } } },
 
 {ch:"아래로 내려보내기", title:"지점 입고 · 교사 수령 · 학생 전달", async view(){
-  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return needPlan();
   const flow = ["planned","printed","bound","packed","shipped","received","handed","delivered"], at = flow.indexOf(b.status);
-  return `<p class="lead">차가 지점에 도착하면 박스를 읽고(입고), 교사가 자기 묶음을 읽고 가져가고(수령), 방문 수업에서 학생에게 주며 책을 읽습니다(전달).</p>
+  return `<p class="lead">${L("차가 지점에 도착하면 박스를 읽고(입고), 교사가 자기 묶음을 읽고 가져가고(수령), 방문 수업에서 학생에게 주며 책을 읽습니다(전달).",
+    "When the truck reaches the branch, the box is scanned (receipt); the teacher scans and takes their bundle (pickup); and the book is scanned as it's handed to the student at the home visit (delivery).",
+    "貨車抵達分處時掃描箱子（入庫），老師掃描並領走自己的套組（領取），到府上課交給學生時再掃描書（交付）。")}</p>
   <div class="row">${flow.map((s,i)=>chip(`${["📋","🖨️","📎","🧺","🚚","🏢","👩‍🏫","🧒"][i]} ${META.status[s]}`, i<=at?"ok":"")).join(" → ")}</div>
-  <h3>이 책이 지나온 길(스캔 기록)</h3><div class="scroll"><table><tr><th>시각</th><th>어디서</th><th>결과</th><th>내용</th></tr>${b.history.map(h=>`<tr><td>${esc(h.ts.replace("T"," "))}</td><td>${esc(META.stations[h.station]||h.station)}</td><td>${h.ok?chip("확인","ok"):chip("거부","bad")}</td><td>${esc(h.message||"")}</td></tr>`).join("")||'<tr><td class="mute">아직 기록이 없습니다.</td></tr>'}</table></div>
-  <div class="why">박스가 움직이면 안에 든 묶음과 책의 상태가 함께 바뀝니다. 본사·지점·교사 누구나 <b>책 코드 하나로 지금 어디 있는지</b> 조회할 수 있습니다. 거부된 스캔까지 모두 기록에 남습니다.</div>
-  <div class="row"><button class="b p" data-act="deliver" ${b.status==="shipped"?"":"disabled"}>지점 입고 → 교사 수령 → 학생 전달까지 진행</button></div>
-  ${at<4?need(false,"먼저 9단계에서 상차까지 진행해 주세요."):""}`; },
-  acts:{ async deliver(){ const r = await sim("deliver"); ctx.done[9] = true; msg = ["ok", `박스 ${num(r.recv)}개 입고, 묶음 ${num(r.hand)}개 수령, 책 ${num(r.deliver)}권 전달.`]; } } },
+  <h3>${L("이 책이 지나온 길(스캔 기록)","Where this book has been (scan history)","這本書走過的路（掃描紀錄）")}</h3><div class="scroll"><table><tr><th>${L("시각","Time","時間")}</th><th>${L("어디서","Where","地點")}</th><th>${L("결과","Result","結果")}</th><th>${L("내용","Details","內容")}</th></tr>${b.history.map(h=>`<tr><td>${esc(h.ts.replace("T"," "))}</td><td>${esc(META.stations[h.station]||h.station)}</td><td>${h.ok?chip(L("확인","OK","確認"),"ok"):chip(L("거부","Rejected","拒絕"),"bad")}</td><td>${esc(h.message||"")}</td></tr>`).join("")||`<tr><td class="mute">${L("아직 기록이 없습니다.","No records yet.","尚無紀錄。")}</td></tr>`}</table></div>
+  <div class="why">${L(`박스가 움직이면 안에 든 묶음과 책의 상태가 함께 바뀝니다. 본사·지점·교사 누구나 <b>책 코드 하나로 지금 어디 있는지</b> 조회할 수 있습니다. 거부된 스캔까지 모두 기록에 남습니다.`,
+    `When a box moves, the bundles and books inside update with it. Head office, branches and teachers can all <b>look up where a book is with just its code</b>. Even rejected scans are recorded.`,
+    `箱子一移動，裡面的套組與書的狀態也一起更新。總部、分處、老師都能<b>只用書的代碼查到它現在在哪裡</b>。連被拒絕的掃描也會留下紀錄。`)}</div>
+  <div class="row"><button class="b p" data-act="deliver" ${b.status==="shipped"?"":"disabled"}>${L("지점 입고 → 교사 수령 → 학생 전달까지 진행","Branch receipt → teacher pickup → delivery to student","分處入庫 → 老師領取 → 交給學生")}</button></div>
+  ${at<4?need(false,L("먼저 9단계에서 상차까지 진행해 주세요.","First go as far as truck loading in step 9.","請先在第 9 步進行到裝車。")):""}`; },
+  acts:{ async deliver(){ const r = await sim("deliver"); ctx.done[9] = true; msg = ["ok", L(`박스 ${num(r.recv)}개 입고, 묶음 ${num(r.hand)}개 수령, 책 ${num(r.deliver)}권 전달.`, `${num(r.recv)} boxes received, ${num(r.hand)} bundles picked up, ${num(r.deliver)} books delivered.`, `入庫 ${num(r.recv)} 箱、領取 ${num(r.hand)} 個套組、交付 ${num(r.deliver)} 本書。`)]; } } },
 
 {ch:"수업과 다음 주", title:"수업 확인 — 다 했는가", async view(){
-  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return need(false, "먼저 10단계에서 학생 전달까지 진행해 주세요.");
-  const s = await student(), math = b.items.find(i => i.kind==="unit" && i.subject_name==="수학") || b.items.find(i => i.kind==="unit");
-  return `<p class="lead">교사는 다음 방문 때 <b>지난 책을 다 했는지</b> 확인합니다. 이 한 번의 확인이 다음 교재를 만들지 말지를 정합니다.</p>
-  <p>지금 기록: ${b.lesson?chip(META.lesson[b.lesson.result], b.lesson.result==="done"?"ok":"warn")+(b.lesson.note?` <span class="mute">${esc(b.lesson.note)}</span>`:""):chip("아직 확인 안 함")}</p>
-  <div class="scroll"><table><tr><th>과목</th><th>다음에 나갈 호</th><th>다음 컷오프</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${e.next_seq}호</td><td>${e.hold_next?chip("생산 보류 — "+(e.hold_reason||"학습 지연"),"warn"):chip("정상 생산","ok")}</td></tr>`).join("")}</table></div>
-  <div class="why"><b>교재는 진도표대로 무조건 나가지 않습니다.</b> "일부만 했다"나 "결석"으로 기록하면 그 과목은 다음 컷오프 한 번을 쉽니다. 못 한 교재 위에 새 교재가 쌓이지 않습니다.</div>
-  <div class="row"><button class="b p" data-act="late" data-subject="${math.subject_id}">${esc(math.subject_name)}을(를) 다 못 했다고 기록(지연)</button><button class="b" data-act="alldone">모두 완료로 기록</button></div>`; },
-  acts:{ async late(el){ const b = await bookOf(ctx.c1); const r = await api(`/api/books/${b.id}/lesson`, {result:"partial", note:"절반만 풀었음", subject_ids:[Number(el.dataset.subject)], actor:"시연 교사"}); ctx.done[10] = true; msg = ["warn", `지연으로 기록했습니다. ${r.held_subjects.join(", ")} 과목은 다음 컷오프에서 생산하지 않습니다.`]; },
-    async alldone(){ const b = await bookOf(ctx.c1); await api(`/api/books/${b.id}/lesson`, {result:"done", actor:"시연 교사"}); ctx.done[10] = true; msg = ["ok", "완료로 기록했습니다. 다음 컷오프에서 모든 과목이 정상 생산됩니다."]; } } },
+  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return needDelivered();
+  const s = await student(), math = b.items.find(i => i.kind==="unit" && MATH.includes(i.subject_name)) || b.items.find(i => i.kind==="unit");
+  return `<p class="lead">${L(`교사는 다음 방문 때 <b>지난 책을 다 했는지</b> 확인합니다. 이 한 번의 확인이 다음 교재를 만들지 말지를 정합니다.`, `At the next visit, the teacher checks <b>whether last week's book was finished</b>. That one check decides whether the next workbook is made.`, `下次到府時，老師確認<b>上一本書是否做完</b>。這一次確認決定是否製作下一本講義。`)}</p>
+  <p>${L("지금 기록:","Current record:","目前紀錄：")} ${b.lesson?chip(META.lesson[b.lesson.result], b.lesson.result==="done"?"ok":"warn")+(b.lesson.note?` <span class="mute">${esc(b.lesson.note)}</span>`:""):chip(L("아직 확인 안 함","Not checked yet","尚未確認"))}</p>
+  <div class="scroll"><table><tr><th>${L("과목","Subject","科目")}</th><th>${L("다음에 나갈 호","Next issue","下一期")}</th><th>${L("다음 컷오프","Next cutoff","下次截單")}</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${L(`${e.next_seq}호`, `No. ${e.next_seq}`, `第 ${e.next_seq} 期`)}</td><td>${e.hold_next?chip(`${L("생산 보류","Production on hold","暫停生產")} — ${e.hold_reason||L("학습 지연","learning delay","學習延遲")}`,"warn"):chip(L("정상 생산","Normal production","正常生產"),"ok")}</td></tr>`).join("")}</table></div>
+  <div class="why">${L(`<b>교재는 진도표대로 무조건 나가지 않습니다.</b> "일부만 했다"나 "결석"으로 기록하면 그 과목은 다음 컷오프 한 번을 쉽니다. 못 한 교재 위에 새 교재가 쌓이지 않습니다.`,
+    `<b>Workbooks don't go out blindly by the schedule.</b> Recording "partly done" or "absent" makes that subject skip the next cutoff once. New workbooks don't pile up on unfinished ones.`,
+    `<b>講義不會照進度表硬是出貨。</b>記錄為「只做一部分」或「缺席」時，該科目會休息一次截單。不會在沒寫完的講義上再疊新講義。`)}</div>
+  <div class="row"><button class="b p" data-act="late" data-subject="${math.subject_id}">${L(`${esc(math.subject_name)}을(를) 다 못 했다고 기록(지연)`, `Record ${esc(math.subject_name)} as not finished (delayed)`, `記錄${esc(math.subject_name)}沒做完（延遲）`)}</button><button class="b" data-act="alldone">${L("모두 완료로 기록","Record all as done","全部記錄為完成")}</button></div>`; },
+  acts:{ async late(el){ const b = await bookOf(ctx.c1); const r = await api(`/api/books/${b.id}/lesson`, {result:"partial", note:"절반만 풀었음", subject_ids:[Number(el.dataset.subject)], actor:"시연 교사"}); ctx.done[10] = true; msg = ["warn", L(`지연으로 기록했습니다. ${r.held_subjects.join(", ")} 과목은 다음 컷오프에서 생산하지 않습니다.`, `Recorded as delayed. ${r.held_subjects.join(", ")} won't be produced at the next cutoff.`, `已記錄為延遲。${r.held_subjects.join("、")}在下次截單不會生產。`)]; },
+    async alldone(){ const b = await bookOf(ctx.c1); await api(`/api/books/${b.id}/lesson`, {result:"done", actor:"시연 교사"}); ctx.done[10] = true; msg = ["ok", L("완료로 기록했습니다. 다음 컷오프에서 모든 과목이 정상 생산됩니다.","Recorded as done. Every subject is produced normally at the next cutoff.","已記錄為完成。下次截單所有科目都會正常生產。")]; } } },
 
 {ch:"수업과 다음 주", title:"다음 주 컷오프 — 지연된 과목은 나가지 않는다", async view(){
-  if(!ctx.done[10]) return need(false, "먼저 11단계에서 수업 확인을 기록해 주세요.");
-  if(!ctx.c2) return `<p class="lead">한 주가 지나 다음 컷오프입니다. 지연으로 기록된 과목이 정말 빠지는지 확인합니다.</p><div class="row"><button class="b p" data-act="next">다음 주 사이클을 열고 주문 확정</button></div>`;
+  if(!ctx.done[10]) return need(false, L("먼저 11단계에서 수업 확인을 기록해 주세요.","First record the lesson check in step 11.","請先在第 11 步記錄上課確認。"));
+  if(!ctx.c2) return `<p class="lead">${L("한 주가 지나 다음 컷오프입니다. 지연으로 기록된 과목이 정말 빠지는지 확인합니다.","A week has passed and it's the next cutoff. Let's check that the delayed subject really drops out.","過了一週，又到下次截單。來確認被記錄為延遲的科目是否真的被排除。")}</p><div class="row"><button class="b p" data-act="next">${L("다음 주 사이클을 열고 주문 확정","Open next week's cycle and fix orders","開啟下週週期並確定訂單")}</button></div>`;
   const [b1, b2, held, s] = await Promise.all([bookOf(ctx.c1), bookOf(ctx.c2), api(`/api/cycles/${ctx.c2}/held`), student()]);
   const mine = held.filter(h => h.ref_code === s.code);
-  return `<p class="lead"><b>${ctx.c2code}</b> 주문을 확정했습니다. 이번 주에 <b>${num(ctx.c2stats.held)}건</b>이 학습 지연으로 생산에서 빠졌습니다.</p>
-  ${mine.map(h=>`<div class="note warn">${esc(h.detail)}</div>`).join("")||`<div class="note ok">${esc(s.name)} 학생은 지연 기록이 없어 모든 과목이 정상 생산됐습니다.</div>`}
-  <h3>${esc(s.name)} 학생 — 지난주 책과 이번 주 책</h3>
-  <div class="scroll"><table><tr><th>주</th><th>들어간 호</th><th>쪽</th></tr>
-    <tr><td>${ctx.c1code}</td><td>${b1?b1.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", "):""}</td><td>${b1?b1.pages:""}</td></tr>
-    <tr class="me"><td>${ctx.c2code}</td><td>${b2?b2.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", "):"책 없음(모든 과목 보류)"}</td><td>${b2?b2.pages:"-"}</td></tr></table></div>
-  <div class="why">빠진 과목의 "다음에 나갈 호"는 <b>그대로 남아 있습니다</b>. 건너뛰는 것이 아니라 한 주 쉬는 것입니다. 종이도, 인쇄도, 배송도 그만큼 줄어듭니다.</div>`; },
-  acts:{ async next(){ const st = await openAndFreeze("c2"); ctx.done[11] = true; msg = ["ok", `책 ${num(st.books)}권 확정, 학습 지연 보류 ${num(st.held)}건.`]; } } },
+  const units = b => b.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", ");
+  return `<p class="lead">${L(`<b>${ctx.c2code}</b> 주문을 확정했습니다. 이번 주에 <b>${num(ctx.c2stats.held)}건</b>이 학습 지연으로 생산에서 빠졌습니다.`, `Orders for <b>${ctx.c2code}</b> are fixed. This week <b>${num(ctx.c2stats.held)}</b> item(s) were left out of production because of learning delays.`, `<b>${ctx.c2code}</b> 的訂單已確定。本週有 <b>${num(ctx.c2stats.held)} 筆</b>因學習延遲而未生產。`)}</p>
+  ${mine.map(h=>`<div class="note warn">${esc(h.detail)}</div>`).join("")||`<div class="note ok">${L(`${esc(s.name)} 학생은 지연 기록이 없어 모든 과목이 정상 생산됐습니다.`, `${esc(s.name)} has no delay records, so every subject was produced.`, `${esc(s.name)} 沒有延遲紀錄，所有科目都正常生產。`)}</div>`}
+  <h3>${L(`${esc(s.name)} 학생 — 지난주 책과 이번 주 책`, `${esc(s.name)}: last week's and this week's book`, `${esc(s.name)}：上週與本週的書`)}</h3>
+  <div class="scroll"><table><tr><th>${L("주","Week","週")}</th><th>${L("들어간 호","Issues included","包含的期數")}</th><th>${L("쪽","Pages","頁數")}</th></tr>
+    <tr><td>${ctx.c1code}</td><td>${b1?units(b1):""}</td><td>${b1?b1.pages:""}</td></tr>
+    <tr class="me"><td>${ctx.c2code}</td><td>${b2?units(b2):L("책 없음(모든 과목 보류)","No book (every subject on hold)","沒有書（所有科目暫停）")}</td><td>${b2?b2.pages:"-"}</td></tr></table></div>
+  <div class="why">${L(`빠진 과목의 "다음에 나갈 호"는 <b>그대로 남아 있습니다</b>. 건너뛰는 것이 아니라 한 주 쉬는 것입니다. 종이도, 인쇄도, 배송도 그만큼 줄어듭니다.`, `The left-out subject's "next issue" <b>stays where it was</b>. It isn't skipped; it rests for a week. Paper, printing and delivery shrink accordingly.`, `被排除科目的「下一期」<b>維持不變</b>。不是跳過，而是休息一週。紙張、印刷與配送也跟著減少。`)}</div>`; },
+  acts:{ async next(){ const st = await openAndFreeze("c2"); ctx.done[11] = true; msg = ["ok", L(`책 ${num(st.books)}권 확정, 학습 지연 보류 ${num(st.held)}건.`, `${num(st.books)} books fixed, ${num(st.held)} held for learning delay.`, `已確定 ${num(st.books)} 本書，因學習延遲暫停 ${num(st.held)} 筆。`)]; } } },
 
 {ch:"수업과 다음 주", title:"다시 이어 가기", async view(){
-  if(!ctx.c2) return need(false, "먼저 12단계에서 다음 주 주문을 확정해 주세요.");
-  if(!ctx.c3) return `<p class="lead">보류는 <b>한 번</b>입니다. 그다음 주에는 멈춘 자리에서 다시 이어 갑니다. 여전히 못 했다면 교사가 다시 지연으로 기록하면 됩니다.</p><div class="row"><button class="b p" data-act="third">그다음 주 사이클을 열고 주문 확정</button></div>`;
+  if(!ctx.c2) return need(false, L("먼저 12단계에서 다음 주 주문을 확정해 주세요.","First fix next week's orders in step 12.","請先在第 12 步確定下週訂單。"));
+  if(!ctx.c3) return `<p class="lead">${L(`보류는 <b>한 번</b>입니다. 그다음 주에는 멈춘 자리에서 다시 이어 갑니다. 여전히 못 했다면 교사가 다시 지연으로 기록하면 됩니다.`, `A hold lasts <b>once</b>. The week after, the subject continues from where it stopped. If it's still not done, the teacher records a delay again.`, `暫停只有<b>一次</b>。再下一週會從停下的地方繼續。如果仍然沒做完，老師再記錄一次延遲即可。`)}</p><div class="row"><button class="b p" data-act="third">${L("그다음 주 사이클을 열고 주문 확정","Open the following week's cycle and fix orders","開啟再下一週的週期並確定訂單")}</button></div>`;
   const [b2, b3, s] = await Promise.all([bookOf(ctx.c2), bookOf(ctx.c3), student()]);
-  const list = b => b ? b.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", ") : "책 없음";
-  return `<p class="lead"><b>${ctx.c3code}</b> 주문을 확정했습니다. 쉬었던 과목이 멈춘 호에서 다시 나갑니다.</p>
-  <div class="scroll"><table><tr><th>주</th><th>${esc(s.name)} 학생의 책에 들어간 호</th></tr><tr><td>${ctx.c2code}</td><td>${list(b2)}</td></tr><tr class="me"><td>${ctx.c3code}</td><td>${list(b3)}</td></tr></table></div>
-  <div class="why"><b>자동 보류도 있습니다.</b> 교사가 아무 기록도 하지 않은 채 수업 확인이 안 된 교재가 ${META.hold.max_unchecked_weeks}주치 쌓이면, 그 학생의 새 교재는 만들지 않습니다. 기록이 없어도 교재가 끝없이 쌓이지 않습니다.</div>`; },
-  acts:{ async third(){ const st = await openAndFreeze("c3"); ctx.done[12] = true; msg = ["ok", `책 ${num(st.books)}권 확정, 보류 ${num(st.held)}건.`]; } } },
+  const list = b => b ? b.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", ") : L("책 없음","No book","沒有書");
+  return `<p class="lead">${L(`<b>${ctx.c3code}</b> 주문을 확정했습니다. 쉬었던 과목이 멈춘 호에서 다시 나갑니다.`, `Orders for <b>${ctx.c3code}</b> are fixed. The subject that rested goes out again from the issue where it stopped.`, `<b>${ctx.c3code}</b> 的訂單已確定。休息過的科目從停下的那一期重新出貨。`)}</p>
+  <div class="scroll"><table><tr><th>${L("주","Week","週")}</th><th>${L(`${esc(s.name)} 학생의 책에 들어간 호`, `Issues in ${esc(s.name)}'s book`, `${esc(s.name)} 的書包含的期數`)}</th></tr><tr><td>${ctx.c2code}</td><td>${list(b2)}</td></tr><tr class="me"><td>${ctx.c3code}</td><td>${list(b3)}</td></tr></table></div>
+  <div class="why">${L(`<b>자동 보류도 있습니다.</b> 교사가 아무 기록도 하지 않은 채 수업 확인이 안 된 교재가 ${META.hold.max_unchecked_weeks}주치 쌓이면, 그 학생의 새 교재는 만들지 않습니다. 기록이 없어도 교재가 끝없이 쌓이지 않습니다.`,
+    `<b>There is also an automatic hold.</b> If ${META.hold.max_unchecked_weeks} weeks of workbooks pile up with no lesson check from the teacher, no new workbook is made for that student. Workbooks can't pile up forever even without records.`,
+    `<b>也有自動暫停。</b>如果老師完全沒有記錄、未確認的講義累積了 ${META.hold.max_unchecked_weeks} 週，就不再為該學生製作新講義。即使沒有紀錄，講義也不會無限堆積。`)}</div>`; },
+  acts:{ async third(){ const st = await openAndFreeze("c3"); ctx.done[12] = true; msg = ["ok", L(`책 ${num(st.books)}권 확정, 보류 ${num(st.held)}건.`, `${num(st.books)} books fixed, ${num(st.held)} on hold.`, `已確定 ${num(st.books)} 本書，暫停 ${num(st.held)} 筆。`)]; } } },
 
 {ch:"수업과 다음 주", title:"채점 사진 — 누구 것인지 고르지 않는다", async view(){
-  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return need(false, "먼저 10단계에서 학생 전달까지 진행해 주세요.");
-  const s = await student(), g = s.gradings, last = ctx.grade;
-  return `<p class="lead">교사가 채점한 쪽을 <b>사진으로 찍어 올리기만</b> 하면, 그 쪽에 찍힌 고유 QR 코드로 누구의 어느 책, 어느 과목 몇 호 몇 쪽인지 시스템이 알아서 정리합니다.</p>
-  <div class="why">본문 쪽마다 아래 가운데에 <b>쪽 고유 QR 코드</b>가 있습니다(책 코드 + 쪽 번호). 학생이 수십 명이어도 교사는 학생을 고르거나 쪽을 적을 필요가 없습니다. 틀린 문항을 함께 표시하면 그 학생의 <b>약한 문항</b>으로 쌓여 나중에 오답 노트로 모아 찍힙니다.</div>
-  ${last?`<div class="chain"><div><small>사진 한 장</small>${esc(last.read_by)}</div><i>→</i><div><small>학생</small>${esc(last.book.student_name)}<small>${esc(last.book.cycle_code)}</small></div><i>→</i><div><small>과목·호</small>${esc(last.unit_title||last.part)}</div><i>→</i><div><small>쪽</small>${last.unit_page||"-"}쪽<small>책 전체에서는 ${last.page}쪽</small></div><i>→</i><div><small>틀린 문항</small>${last.wrong_items.join(", ")||"없음"}번<small>약한 문항에 추가됨</small></div></div>
-    ${last.image_file?`<p><a href="uploads/${esc(last.image_file)}" target="_blank">올라간 사진 보기</a></p>`:""}`:""}
-  <h3>${esc(s.name)} 학생에게 정리된 채점 사진</h3><div class="scroll"><table><tr><th>올린 때</th><th>호</th><th>쪽</th><th>틀린 문항</th></tr>${g.map(x=>`<tr><td>${esc(x.created_at.replace("T"," "))}</td><td>${esc(x.unit_title||"")}</td><td>${x.unit_page||""}</td><td>${esc(x.wrong_items||"")}</td></tr>`).join("")||'<tr><td class="mute">아직 없습니다.</td></tr>'}</table></div>
-  <h3>약한 문항(오답 노트 재료)</h3><div class="row">${s.weak.map(w=>chip(`${w.title} ${w.item_no}번`, w.status==="printed"?"ok":"warn")).join(" ")||'<span class="mute">아직 없습니다.</span>'}</div>
-  <div class="row" style="margin-top:12px"><button class="b p" data-act="photo">이 학생 책의 한 쪽을 찍어 올려 보기</button><span class="mute">책의 실제 쪽을 그림으로 만들어 사진처럼 올립니다. 틀린 문항 두 개를 함께 표시합니다.</span></div>
-  <p class="mute">진짜 사진으로 해 보려면 책 PDF를 인쇄해 채점한 뒤, 운영 화면의 "교사 화면 → 채점 사진 올리기"에서 올리세요.</p>`; },
+  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return needDelivered();
+  const s = await student(), g = s.gradings, last = ctx.grade ? trData(ctx.grade) : null;
+  return `<p class="lead">${L(`교사가 채점한 쪽을 <b>사진으로 찍어 올리기만</b> 하면, 그 쪽에 찍힌 고유 QR 코드로 누구의 어느 책, 어느 과목 몇 호 몇 쪽인지 시스템이 알아서 정리합니다.`, `The teacher <b>just takes a photo of a graded page and uploads it</b>. From the page's own QR code, the system works out whose book, which subject, issue and page it is.`, `老師只要<b>把批改好的那一頁拍照上傳</b>，系統就會透過該頁專屬的 QR 碼，自動整理出是誰的哪本書、哪個科目第幾期第幾頁。`)}</p>
+  <div class="why">${L(`본문 쪽마다 아래 가운데에 <b>쪽 고유 QR 코드</b>가 있습니다(책 코드 + 쪽 번호). 학생이 수십 명이어도 교사는 학생을 고르거나 쪽을 적을 필요가 없습니다. 틀린 문항을 함께 표시하면 그 학생의 <b>약한 문항</b>으로 쌓여 나중에 오답 노트로 모아 찍힙니다.`,
+    `Every body page has a <b>unique page QR code</b> at the bottom center (book code + page number). Even with dozens of students, the teacher never picks a student or writes a page number. Marked wrong answers build up as that student's <b>weak items</b> and are later printed together as review notes.`,
+    `每一頁內頁下方正中央都有<b>頁面專屬 QR 碼</b>（書代碼 + 頁碼）。即使有幾十位學生，老師也不必挑選學生或填寫頁碼。一起標示答錯的題目，就會累積為該學生的<b>弱點題目</b>，之後集中印成錯題本。`)}</div>
+  ${last?`<div class="chain"><div><small>${L("사진 한 장","One photo","一張照片")}</small>${esc(last.read_by)}</div><i>→</i><div><small>${L("학생","Student","學生")}</small>${esc(last.book.student_name)}<small>${esc(last.book.cycle_code)}</small></div><i>→</i><div><small>${L("과목·호","Subject & issue","科目・期數")}</small>${esc(last.unit_title||last.part)}</div><i>→</i><div><small>${L("쪽","Page","頁")}</small>${L(`${last.unit_page||"-"}쪽`, `p. ${last.unit_page||"-"}`, `第 ${last.unit_page||"-"} 頁`)}<small>${L(`책 전체에서는 ${last.page}쪽`, `p. ${last.page} of the whole book`, `全書第 ${last.page} 頁`)}</small></div><i>→</i><div><small>${L("틀린 문항","Wrong answers","答錯的題目")}</small>${L(`${last.wrong_items.join(", ")||"없음"}번`, `No. ${last.wrong_items.join(", ")||"none"}`, `第 ${last.wrong_items.join("、")||"無"} 題`)}<small>${L("약한 문항에 추가됨","Added to weak items","已加入弱點題目")}</small></div></div>
+    ${last.image_file?`<p><a href="uploads/${esc(last.image_file)}" target="_blank">${L("올라간 사진 보기","View the uploaded photo","查看上傳的照片")}</a></p>`:""}`:""}
+  <h3>${L(`${esc(s.name)} 학생에게 정리된 채점 사진`, `Graded photos filed for ${esc(s.name)}`, `已歸檔到 ${esc(s.name)} 的批改照片`)}</h3><div class="scroll"><table><tr><th>${L("올린 때","Uploaded","上傳時間")}</th><th>${L("호","Issue","期數")}</th><th>${L("쪽","Page","頁")}</th><th>${L("틀린 문항","Wrong answers","答錯的題目")}</th></tr>${g.map(x=>`<tr><td>${esc(x.created_at.replace("T"," "))}</td><td>${esc(x.unit_title||"")}</td><td>${x.unit_page||""}</td><td>${esc(x.wrong_items||"")}</td></tr>`).join("")||`<tr><td class="mute">${L("아직 없습니다.","None yet.","尚無。")}</td></tr>`}</table></div>
+  <h3>${L("약한 문항(오답 노트 재료)","Weak items (review-note material)","弱點題目（錯題本素材）")}</h3><div class="row">${s.weak.map(w=>chip(L(`${w.title} ${w.item_no}번`, `${w.title} · Q${w.item_no}`, `${w.title} 第 ${w.item_no} 題`), w.status==="printed"?"ok":"warn")).join(" ")||`<span class="mute">${L("아직 없습니다.","None yet.","尚無。")}</span>`}</div>
+  <div class="row" style="margin-top:12px"><button class="b p" data-act="photo">${L("이 학생 책의 한 쪽을 찍어 올려 보기","Photograph and upload a page from this student's book","拍下這位學生書中的一頁並上傳")}</button><span class="mute">${L("책의 실제 쪽을 그림으로 만들어 사진처럼 올립니다. 틀린 문항 두 개를 함께 표시합니다.","Renders a real page of the book as an image and uploads it like a photo, with two wrong answers marked.","把書的實際頁面做成圖片，像照片一樣上傳，並標示兩題答錯。")}</span></div>
+  <p class="mute">${L(`진짜 사진으로 해 보려면 책 PDF를 인쇄해 채점한 뒤, 운영 화면의 "교사 화면 → 채점 사진 올리기"에서 올리세요.`, `To try with a real photo, print the book PDF, grade it, and upload it in the operations screen under "Teacher → Upload graded photo".`, `若要用真的照片試試，請印出書的 PDF 批改後，在營運畫面的「老師畫面 → 上傳批改照片」上傳。`)}</p>`; },
   acts:{ async photo(){ const b = await bookOf(ctx.c1); const n = (ctx.gradeN || 0); const page = 3 + n; const per = META.book.items_per_page;
       const where = await api(`/api/grading/locate?code=${b.code}&page=${page}`);
-      const r = await api(`/api/books/${b.id}/grading-sample`, {page, wrong_items: where.items.length ? [where.items[1], where.items[per-1]] : []});
-      ctx.grade = r; ctx.gradeN = n + 1; ctx.done[13] = true; msg = ["ok", `사진 한 장으로 ${r.book.student_name} · ${r.unit_title||r.part} ${r.unit_page||""}쪽에 정리됐습니다 (${r.read_by}).`]; } } },
+      const raw = await apiRaw(`/api/books/${b.id}/grading-sample`, {page, wrong_items: where.items.length ? [where.items[1], where.items[per-1]] : []});
+      ctx.grade = raw; ctx.gradeN = n + 1; ctx.done[13] = true; const r = trData(raw);   // ctx 에는 원문(언어를 바꿔도 다시 번역)
+      msg = ["ok", L(`사진 한 장으로 ${r.book.student_name} · ${r.unit_title||r.part} ${r.unit_page||""}쪽에 정리됐습니다 (${r.read_by}).`, `One photo was filed to ${r.book.student_name} · ${r.unit_title||r.part} p. ${r.unit_page||""} (${r.read_by}).`, `一張照片已歸檔到 ${r.book.student_name} · ${r.unit_title||r.part} 第 ${r.unit_page||""} 頁（${r.read_by}）。`)]; } } },
 
 {ch:"수업과 다음 주", title:"정리", async view(){
-  return `<p class="lead">한 학생을 따라 처음부터 끝까지 왔습니다.</p>
-  <div class="scroll"><table>
-  <tr><td>1</td><td><b>가입</b></td><td>교사만 정하면 지점·광역·배송 권역이 한 줄로 이어진다</td></tr>
-  <tr><td>2</td><td><b>진도</b></td><td>학생·과목마다 다음에 나갈 호와 분량이 따로 있고, 컷오프 전까지 바꿀 수 있다</td></tr>
-  <tr><td>3</td><td><b>원고</b></td><td>호마다 PDF 하나. 쪽은 번호로 꺼내 쓴다</td></tr>
-  <tr><td>4</td><td><b>컷오프</b></td><td>그 주에 받을 책이 확정되고 코드가 붙는다</td></tr>
-  <tr><td>5</td><td><b>인쇄</b></td><td>권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍어서, 찍힌 순서가 곧 분류다</td></tr>
-  <tr><td>6</td><td><b>내려보내기</b></td><td>책 → 교사 묶음 → 지점 박스 → 권역 차량. 틀린 것은 스캔에서 막힌다</td></tr>
-  <tr><td>7</td><td><b>배송 확인</b></td><td>지점 입고·교사 수령·학생 전달까지 책 한 권 단위로 보인다</td></tr>
-  <tr><td>8</td><td><b>수업 확인</b></td><td>다 못 했으면 그 과목은 다음 주에 만들지 않는다</td></tr>
-  <tr><td>9</td><td><b>채점 사진</b></td><td>찍어 올리기만 하면 쪽 QR 코드로 학생·과목·쪽이 자동 정리되고, 틀린 문항은 오답 노트 재료가 된다</td></tr></table></div>
-  <h3>운영 화면에서 더 볼 수 있는 것</h3>
-  <p>약한 문항을 체크해 두었다가 모아 찍는 <b>오답 노트</b>, 불량 <b>재인쇄</b>와 묶음 누락 처리, 고객사 시스템과 주고받는 <b>연동 파일</b>, 회원 수를 넣어 보는 <b>물량·설비 환산</b>. <a class="live" href="/">운영 화면 열기</a></p>`; },
+  const rows = [
+    [["가입","Sign-up","入會"], ["교사만 정하면 지점·광역·배송 권역이 한 줄로 이어진다","Choose the teacher, and the branch, region and route link up in one chain","只要選定老師，分處、區域與配送路線就串成一條線"]],
+    [["진도","Progress","進度"], ["학생·과목마다 다음에 나갈 호와 분량이 따로 있고, 컷오프 전까지 바꿀 수 있다","Each student and subject has its own next issue and pace, changeable until the cutoff","每位學生、每個科目都有各自的下一期與份量，截單前都能修改"]],
+    [["원고","Content","原稿"], ["호마다 PDF 하나. 쪽은 번호로 꺼내 쓴다","One PDF per issue; pages are pulled by number","每期一個 PDF，依頁碼取用"]],
+    [["컷오프","Cutoff","截單"], ["그 주에 받을 책이 확정되고 코드가 붙는다","The week's book is fixed and gets a code","確定該週的書並賦予代碼"]],
+    [["인쇄","Printing","印刷"], ["권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍어서, 찍힌 순서가 곧 분류다","Printed by route → branch → teacher → visit day → student, so print order is sort order","依路線 → 分處 → 老師 → 到府星期 → 學生印刷，印出的順序就是分揀"]],
+    [["내려보내기","Sending out","往下配送"], ["책 → 교사 묶음 → 지점 박스 → 권역 차량. 틀린 것은 스캔에서 막힌다","Book → teacher bundle → branch box → route truck; mistakes are stopped at scan","書 → 老師套組 → 分處箱 → 路線貨車，出錯在掃描時就被擋下"]],
+    [["배송 확인","Delivery tracking","配送確認"], ["지점 입고·교사 수령·학생 전달까지 책 한 권 단위로 보인다","Branch receipt, teacher pickup and delivery are visible book by book","分處入庫、老師領取、交給學生都能以一本書為單位查看"]],
+    [["수업 확인","Lesson check","上課確認"], ["다 못 했으면 그 과목은 다음 주에 만들지 않는다","If a subject isn't finished, it isn't made next week","沒做完的科目下週就不製作"]],
+    [["채점 사진","Graded photos","批改照片"], ["찍어 올리기만 하면 쪽 QR 코드로 학생·과목·쪽이 자동 정리되고, 틀린 문항은 오답 노트 재료가 된다","Just upload a photo: the page QR code files it by student, subject and page, and wrong answers become review-note material","只要拍照上傳，頁面 QR 碼就會依學生、科目、頁數自動整理，答錯的題目成為錯題本素材"]]];
+  return `<p class="lead">${L("한 학생을 따라 처음부터 끝까지 왔습니다.","We've followed one student from start to finish.","我們跟著一位學生從頭走到了尾。")}</p>
+  <div class="scroll"><table>${rows.map(([h, d], i) => `<tr><td>${i+1}</td><td><b>${L(...h)}</b></td><td>${L(...d)}</td></tr>`).join("")}</table></div>
+  <h3>${L("운영 화면에서 더 볼 수 있는 것","More in the operations screen","營運畫面中還可以看到")}</h3>
+  <p>${L(`약한 문항을 체크해 두었다가 모아 찍는 <b>오답 노트</b>, 불량 <b>재인쇄</b>와 묶음 누락 처리, 고객사 시스템과 주고받는 <b>연동 파일</b>, 회원 수를 넣어 보는 <b>물량·설비 환산</b>.`,
+    `<b>Review notes</b> that collect and print checked weak items, defect <b>reprints</b> and missing-bundle handling, <b>interchange files</b> with the client's systems, and a <b>volume and equipment calculator</b> that takes member counts.`,
+    `把勾選的弱點題目集中印出的<b>錯題本</b>、不良品<b>重印</b>與套組缺件處理、與客戶系統往來的<b>介接檔案</b>，以及輸入會員數即可估算的<b>產量・設備換算</b>。`)} <a class="live" href="/">${L("운영 화면 열기","Open the operations screen","開啟營運畫面")}</a></p>`; },
   acts:{} },
 ];
 
@@ -475,11 +515,11 @@ function rail(){ let last = "", html = "";
     html += `<button data-go="${i}" class="${i===ctx.step?"on":""} ${ctx.done[i]?"done":""}"><span class="n">${ctx.done[i]?"✓":i+1}</span>${esc(titleOf(i))}</button>`; });
   $("#rail").innerHTML = html; }
 // 발표 모드에서 → 를 누르면 먼저 실행하는 그 단계의 일(데이터를 지우는 초기화는 넣지 않는다)
-const AUTO = {1:["join","가입 처리"], 3:["assets","견본 원고 붙이기"], 4:["freeze","주문 확정"], 5:["plan","생산 계획 세우기"],
-  7:["bind","인쇄하고 제본 검수"], 8:["load","묶음 포장 → 박스 → 상차"], 9:["deliver","입고 → 교사 수령 → 학생 전달"],
-  10:["late","수업 확인(수학 지연) 기록"], 11:["next","다음 주 주문 확정"], 12:["third","그다음 주 주문 확정"], 13:["photo","채점 사진 올리기"]};
+const AUTO = {1:["join","가입 처리","Sign up","辦理入會"], 3:["assets","견본 원고 붙이기","Attach sample content","附上範例原稿"], 4:["freeze","주문 확정","Fix orders","確定訂單"], 5:["plan","생산 계획 세우기","Make the production plan","建立生產計畫"],
+  7:["bind","인쇄하고 제본 검수","Print and binding check","印刷與裝訂檢驗"], 8:["load","묶음 포장 → 박스 → 상차","Bundle → box → truck","套組 → 裝箱 → 裝車"], 9:["deliver","입고 → 교사 수령 → 학생 전달","Receipt → pickup → delivery","入庫 → 領取 → 交付"],
+  10:["late","수업 확인(수학 지연) 기록","Record lesson check (math delayed)","記錄上課確認（數學延遲）"], 11:["next","다음 주 주문 확정","Fix next week's orders","確定下週訂單"], 12:["third","그다음 주 주문 확정","Fix the following week's orders","確定再下一週訂單"], 13:["photo","채점 사진 올리기","Upload a graded photo","上傳批改照片"]};
 const pending = () => { const a = AUTO[ctx.step]; if(!a || ctx.done[ctx.step]) return null;
-  const btn = document.querySelector(`#main [data-act="${a[0]}"]`); return btn && !btn.disabled ? [btn, a[1]] : null; };
+  const btn = document.querySelector(`#main [data-act="${a[0]}"]`); return btn && !btn.disabled ? [btn, L(a[1], a[2], a[3])] : null; };
 function bar(){ $("#bar-count").textContent = `${ctx.step+1} / ${STEPS.length}`;
   $("#bar-prog").style.width = `${(ctx.step+1) / STEPS.length * 100}%`;
   if(P.on) return playUi(); const p = pending(), last = ctx.step >= STEPS.length - 1;
@@ -498,7 +538,7 @@ async function render(fresh){ rail(); bar(); const s = STEPS[ctx.step]; let body
   try{ body = await s.view(); }catch(e){ body = `<div class="note bad">불러오지 못했습니다: ${esc(e.message)}</div>`; }
   $("#main").className = fresh ? "fadein" : "";
   $("#main").innerHTML = `${journey()}<div class="card"><div class="mute">${esc(chOf(ctx.step))} · ${ctx.step+1} / ${STEPS.length}</div><h2>${esc(titleOf(ctx.step))}</h2>${photo(ctx.step)}${SCENES[ctx.step] ? SCENES[ctx.step]() : ""}${msg?`<div class="note ${msg[0]}">${esc(msg[1])}</div>`:""}${body}</div>
-    <div class="nav"><button class="b" data-go="${ctx.step-1}" ${ctx.step?"":"disabled"}>← 이전</button><button class="b p" data-go="${ctx.step+1}" ${ctx.step<STEPS.length-1?"":"disabled"}>다음 →</button></div>`;
+    <div class="nav"><button class="b" data-go="${ctx.step-1}" ${ctx.step?"":"disabled"}>← ${L("이전","Back","上一步")}</button><button class="b p" data-go="${ctx.step+1}" ${ctx.step<STEPS.length-1?"":"disabled"}>${L("다음","Next","下一步")} →</button></div>`;
   bar(); save(); }
 // 발표 모드: 전체 화면 + 키보드(→·Space·PageDown 앞으로, ←·PageUp 뒤로, F 전체 화면, Esc 끝)
 function showOn(){ document.body.classList.add("show"); document.documentElement.requestFullscreen?.().catch(() => {}); bar(); }
@@ -634,7 +674,7 @@ document.body.addEventListener("click", async e => {
     return render(); }
 });
 $("#lang").onchange = async e => { if(P.on) stopPlay(); LANG = e.target.value;
-  try{ localStorage.setItem("harubook-lang", LANG); }catch(err){} await loadLang(); render(); };
+  try{ localStorage.setItem("harubook-lang", LANG); }catch(err){} await loadLang(); META = await api("/api/meta"); render(); };
 (async () => { await loadLang(); META = await api("/api/meta");
   if(ctx.sid){ try{ await api(`/api/students/${ctx.sid}`); }catch(e){ ctx = {step:0, done:{}}; } }   // DB가 초기화됐으면 처음부터
   render(); })().catch(e => { $("#main").innerHTML = `<div class="card">불러오지 못했습니다: ${esc(e.message)}</div>`; });
