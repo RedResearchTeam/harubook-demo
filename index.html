@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>하루책 시연</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d1f24;--mute:#6b7280;--line:#e3e1da;--acc:#0f766e;--acc-ink:#fff;--soft:#e6f4f1;
+--ok:#15803d;--okbg:#dcfce7;--bad:#b91c1c;--badbg:#fee2e2;--warn:#a16207;--warnbg:#fef3c7;--chip:#eef2f1}
+@media (prefers-color-scheme:dark){:root{--bg:#15171b;--card:#1e2126;--ink:#eceef1;--mute:#9aa3ae;--line:#30353d;--soft:#12302c;
+--acc:#2dd4bf;--acc-ink:#06201d;--ok:#4ade80;--okbg:#12301d;--bad:#f87171;--badbg:#3a1616;--warn:#fbbf24;--warnbg:#3a2c0a;--chip:#2a2f36}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0}header a{color:var(--acc)}
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:16px;max-width:1240px;margin:0 auto;padding:16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}}
+.rail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;align-self:start;position:sticky;top:12px}
+@media (max-width:860px){.rail{position:static;display:flex;overflow-x:auto;gap:4px}.rail h3{display:none}.rail button{white-space:nowrap}}
+.rail h3{font-size:12px;color:var(--mute);margin:12px 8px 4px;font-weight:500}
+.rail button{display:flex;gap:8px;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;padding:6px 8px;border-radius:8px;cursor:pointer}
+.rail button.on{background:var(--acc);color:var(--acc-ink);font-weight:600}
+.rail button .n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--ink);font-size:12px;display:grid;place-items:center}
+.rail button.done .n{background:var(--okbg);color:var(--ok)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px;min-width:0}
+.card h2{margin:0 0 6px;font-size:21px}.card h3{margin:16px 0 6px;font-size:14px;color:var(--mute)}
+.lead{font-size:16px}.why{background:var(--soft);border-radius:10px;padding:10px 14px;margin:12px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button.b,select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+button.b{cursor:pointer}button.b.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:500;font-size:12px}tr.me td{background:var(--soft);font-weight:600}
+.chip{display:inline-block;padding:1px 9px;border-radius:99px;background:var(--chip);font-size:13px}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.bad{background:var(--badbg);color:var(--bad)}.chip.warn{background:var(--warnbg);color:var(--warn)}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.chain div{border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:120px}
+.chain div small{display:block;color:var(--mute);font-size:12px}.chain i{align-self:center;color:var(--mute);font-style:normal}
+.code{display:flex;flex-wrap:wrap;gap:4px;font-family:Consolas,monospace;font-size:20px}
+.code span{border:1px solid var(--line);border-radius:8px;padding:4px 8px;text-align:center}
+.code small{display:block;font:12px/1.3 "Malgun Gothic",sans-serif;color:var(--mute)}
+.note{padding:12px 14px;border-radius:10px;margin:10px 0;font-weight:600}
+.note.ok{background:var(--okbg);color:var(--ok)}.note.bad{background:var(--badbg);color:var(--bad)}.note.warn{background:var(--warnbg);color:var(--warn)}
+.mono{font-family:Consolas,monospace}.mute{color:var(--mute)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
+/* 여정 지도: 책이 지나가는 길 */
+.journey{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:14px 10px 10px;position:relative}
+.journey .stop{flex:1;min-width:66px;text-align:center;position:relative;font-size:12px;color:var(--mute);cursor:pointer;border:0;background:none;font-family:inherit}
+.journey .stop::before{content:"";position:absolute;top:21px;left:-50%;width:100%;height:4px;background:var(--line);z-index:0}
+.journey .stop:first-child::before{display:none}
+.journey .stop.past::before,.journey .stop.now::before{background:var(--acc)}
+.journey .ico{position:relative;z-index:1;display:grid;place-items:center;width:44px;height:44px;margin:0 auto 4px;border-radius:50%;background:var(--card);border:3px solid var(--line);font-size:22px;transition:transform .3s}
+.journey .past .ico{border-color:var(--acc)}
+.journey .now .ico{border-color:var(--acc);background:var(--soft);transform:scale(1.25)}
+.journey .now{color:var(--ink);font-weight:600}
+.journey .now .ico::after{content:"📘";position:absolute;top:-16px;right:-12px;font-size:18px;animation:bob 1.2s ease-in-out infinite}
+/* 장면 그림 */
+.scene{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;background:var(--soft);border-radius:14px;padding:18px 10px;margin:10px 0;min-height:110px;position:relative;overflow:hidden}
+.scene .it{text-align:center;min-width:64px}.scene .it b{display:block;font-size:40px;line-height:1.15;font-weight:400}
+.scene .it small{display:block;font-size:12px;color:var(--mute)}
+.scene .arrow{font-size:20px;color:var(--acc);animation:nudge 1.1s ease-in-out infinite}
+.scene .pop b{animation:pop 1.6s ease-in-out infinite}.scene .spin b{animation:wiggle 1s ease-in-out infinite}
+.scene .drive b{animation:drive 2.4s ease-in-out infinite}.scene .feed b{animation:feed 1.4s ease-in-out infinite}
+.scene .dim b{opacity:.3;filter:grayscale(1)}
+.tiles{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:8px 0}
+.tile{border-radius:10px;padding:6px 10px;text-align:center;font-size:12px;min-width:70px;border:2px solid transparent;background:var(--chip)}
+.tile b{display:block;font-size:24px;font-weight:400}.tile.me{border-color:var(--acc);box-shadow:0 0 0 3px var(--soft)}
+.tile.slip{background:none;border:2px dashed var(--line);color:var(--mute)}
+@keyframes bob{50%{transform:translateY(-5px)}}@keyframes nudge{50%{transform:translateX(5px)}}
+@keyframes pop{50%{transform:scale(1.18)}}@keyframes wiggle{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+@keyframes drive{0%{transform:translateX(-26px)}50%{transform:translateX(26px)}100%{transform:translateX(-26px)}}
+@keyframes feed{0%{transform:translateY(-10px);opacity:.2}60%{transform:translateY(0);opacity:1}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.scene *,.journey *{animation:none!important;transition:none!important}}
+label{display:inline-flex;gap:6px;align-items:center}
+/* 실사 장면 사진(AI 생성 — 지어낸 사람·장소) */
+.photo{position:relative;margin:10px 0 6px;border-radius:14px;overflow:hidden;background:var(--chip);aspect-ratio:3/2;max-height:460px}
+.photo img{display:block;width:100%;height:100%;object-fit:cover}
+.photo figcaption{position:absolute;left:0;right:0;bottom:0;padding:26px 16px 12px;color:#fff;font-size:15px;line-height:1.45;
+  background:linear-gradient(transparent,rgba(0,0,0,.72));text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.photo figcaption b{display:block;font-size:12px;opacity:.85;font-weight:500;letter-spacing:.02em}
+.photo .ai{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px}
+.scene.mini{min-height:0;padding:10px;gap:4px}.scene.mini .it b{font-size:26px}
+.flow{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
+.flow button{border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden;background:var(--card);color:var(--ink);cursor:pointer;text-align:left;font:inherit}
+.flow button:hover{border-color:var(--acc)}
+.flow img{display:block;width:100%;aspect-ratio:3/2;object-fit:cover}
+.flow span{display:block;padding:6px 8px;font-size:13px;line-height:1.35}.flow span small{display:block;color:var(--mute);font-size:11px}
+/* 발표 모드: 전체 화면, 키보드로 넘긴다 */
+.showbtn{background:var(--acc);color:var(--acc-ink);border:0;border-radius:8px;padding:7px 14px;font:inherit;font-weight:600;cursor:pointer}
+#bar{display:none}
+body.show header,body.show .rail{display:none}
+body.show .wrap{grid-template-columns:1fr;max-width:1500px;padding:10px 24px 90px}
+body.show .card{font-size:17px}body.show .card h2{font-size:28px}
+body.show .photo{max-height:58vh;aspect-ratio:auto;height:58vh}
+body.show .photo figcaption{font-size:19px;padding:40px 24px 18px}
+body.show .nav{display:none}
+body.show #bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;gap:14px;align-items:center;padding:10px 24px;
+  background:var(--card);border-top:1px solid var(--line);box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+#bar .prog{flex:1;height:6px;background:var(--chip);border-radius:99px;overflow:hidden}#bar .prog i{display:block;height:100%;background:var(--acc);transition:width .4s}
+#bar .hint{color:var(--mute);font-size:14px;min-width:260px;text-align:right}#bar .hint b{color:var(--ink)}
+#bar .count{font-variant-numeric:tabular-nums;color:var(--mute)}
+body.busy #bar .hint::after{content:" …";animation:bob 1s infinite}
+.fadein{animation:fadein .35s ease-out}@keyframes fadein{from{opacity:0}to{opacity:1}}   /* 위치는 움직이지 않는다(손가락이 어긋나지 않게) */
+/* 나레이션 자동 시연: 손가락·말풍선·강조 */
+.playbtn{background:#e11d48;color:#fff;border:0;border-radius:8px;padding:7px 14px;font:inherit;font-weight:700;cursor:pointer}
+.spot{position:relative;z-index:5;outline:3px solid var(--acc);outline-offset:4px;border-radius:10px;animation:ring 1.4s ease-out infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(15,118,110,.45)}100%{box-shadow:0 0 0 18px rgba(15,118,110,0)}}
+#finger{position:absolute;z-index:30;font-size:46px;line-height:1;pointer-events:none;display:none;filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+#finger.move{transition:left .45s ease-out,top .45s ease-out}
+#finger.show{animation:fingerIn .25s ease-out}@keyframes fingerIn{from{opacity:0}to{opacity:1}}
+#finger.show.r,#finger.show.d{animation:fingerIn .25s ease-out,var(--poke) .8s ease-in-out .25s infinite}
+#finger.r{--poke:pokeR;animation:pokeR .8s ease-in-out infinite}#finger.d{--poke:pokeD;animation:pokeD .8s ease-in-out infinite}
+@keyframes pokeR{50%{transform:translateX(10px)}}@keyframes pokeD{50%{transform:translateY(10px)}}
+#bubble{position:fixed;z-index:31;left:50%;bottom:78px;transform:translateX(-50%) translateY(20px);opacity:0;width:min(920px,calc(100vw - 32px));
+  display:flex;gap:14px;align-items:flex-start;background:var(--card);color:var(--ink);border:2px solid var(--acc);border-radius:18px;
+  padding:14px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:opacity .3s,transform .3s;pointer-events:none}
+#bubble.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#bubble::after{content:"";position:absolute;left:46px;top:-14px;border:12px solid transparent;border-bottom-color:var(--acc);border-top:0}
+#bubble .who{flex:none;width:52px;height:52px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:30px;position:relative}
+#bubble .who i{position:absolute;right:-4px;bottom:-2px;display:flex;gap:2px;align-items:flex-end;height:16px}
+#bubble .who i b{width:3px;background:var(--acc);border-radius:2px;animation:wave .9s ease-in-out infinite}
+#bubble .who i b:nth-child(2){animation-delay:.15s}#bubble .who i b:nth-child(3){animation-delay:.3s}
+@keyframes wave{0%,100%{height:4px}50%{height:15px}}
+#bubble.paused .who i b{animation:none;height:4px}
+#bubble p{margin:0;font-size:20px;line-height:1.55}#bubble small{display:block;color:var(--mute);font-size:13px;margin-top:4px}
+body.playing .photo img{animation:kb 16s ease-in-out infinite alternate}
+@keyframes kb{from{transform:scale(1) translate(0,0)}to{transform:scale(1.09) translate(-2%,-1.5%)}}
+body.playing .wrap{padding-bottom:230px}
+#bar .ctl{display:none}body.playing #bar .ctl{display:inline-flex}
+@media (prefers-reduced-motion:reduce){body.playing .photo img,#finger,.spot{animation:none!important}}
+#start{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:rgba(0,0,0,.45)}
+#start.on{display:grid}
+#start .box{background:var(--card);color:var(--ink);border-radius:16px;padding:22px;width:min(440px,calc(100vw - 32px));box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#start h3{margin:0 0 6px;font-size:19px}#start p{margin:0 0 14px;color:var(--mute);font-size:14px}
+#start button{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+#start button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+#start button small{display:block;font-weight:400;opacity:.8;font-size:13px}
+</style>
+<header><h1>하루책 시연 — 회원 가입부터 학생 손에 닿기까지</h1><span class="mute">모든 이름·지점은 지어낸 것입니다</span><span style="flex:1"></span>
+  <button class="playbtn" id="play-on" title="나레이션과 함께 처음부터 끝까지 자동으로 진행합니다(스페이스: 일시정지)">🔊 시연 시작</button>
+  <button class="showbtn" id="show-on" title="전체 화면으로 → ← 키로 직접 넘깁니다">▶ 전체 화면(직접 넘기기)</button><a class="live" href="/">운영 화면으로</a></header>
+<div id="start" role="dialog" aria-modal="true" aria-labelledby="start-title"><div class="box">
+  <h3 id="start-title">🔊 나레이션 시연</h3><p>전체 화면으로 바뀌고 나레이션과 함께 끝까지 저절로 진행합니다. 스페이스로 멈추고, Esc 로 끝냅니다.</p>
+  <button class="p" data-start="fresh">처음부터 시작<small>지금 DB를 시연 데이터로 되돌리고 1단계부터</small></button>
+  <button data-start="resume">지금 상태에서 이어서<small>데이터는 그대로, 지금 보고 있는 단계부터</small></button>
+  <button data-start="cancel">취소</button></div></div>
+<div id="finger" aria-hidden="true">👉</div>
+<div id="bubble" aria-live="polite"><span class="who">🧑‍🏫<i><b></b><b></b><b></b></i></span><div><p id="bubble-text"></p><small id="bubble-sub"></small></div></div>
+<div class="wrap"><nav class="rail" id="rail"></nav><main id="main"></main></div>
+<div id="bar"><button class="b" id="bar-prev">←</button><span class="count" id="bar-count"></span><div class="prog"><i id="bar-prog"></i></div>
+  <span class="hint" id="bar-hint"></span>
+  <button class="b ctl" id="bar-play" title="스페이스">⏸ 일시정지</button>
+  <select class="ctl" id="bar-rate" title="나레이션 속도"><option value="1">1.0배</option><option value="1.15" selected>1.15배</option><option value="1.3">1.3배</option><option value="1.5">1.5배</option></select>
+  <button class="b p" id="bar-next">→</button><button class="b" id="show-off" title="발표 모드 끝내기(Esc)">✕</button></div>
+<script src="replay.js"></script>
+<script>
+const $ = q => document.querySelector(q);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => Number(v || 0).toLocaleString("ko-KR");
+async function api(path, body){
+  if(window.HARU_REPLAY) return window.HARU_REPLAY(path, body);   // 공개용 정적 시연: 녹화한 응답을 돌려준다
+  const res = await fetch(path, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const data = await res.json();
+  if(res.status === 401){ location.href = "/"; throw new Error("로그인이 필요합니다 — 운영 화면에서 로그인한 뒤 다시 여세요."); }
+  if(!res.ok) throw new Error(data.error || res.statusText); return data;
+}
+const KEY = "harubook-demo";
+let ctx = {step:0, done:{}}; try{ ctx = JSON.parse(localStorage.getItem(KEY)) || ctx; }catch(e){}
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(ctx)); }catch(e){} };
+let META, msg = null;
+const DOW = ["월","화","수","목","금","토","일"];
+const chip = (label, kind="") => `<span class="chip ${kind}">${esc(label)}</span>`;
+const stat = s => chip(META.status[s] || s, ({delivered:"ok",handed:"ok",received:"ok",shipped:"ok",packed:"ok",bound:"ok",printed:"ok",defect:"bad"})[s] || "");
+const chain = c => `<div class="chain"><div><small>🧒 학생</small>${esc(c.name)} <span class="mute">${esc(c.grade)}</span><small class="mono">${c.code}</small></div><i>→</i>
+  <div><small>👩‍🏫 담당 교사</small>${esc(c.teacher_name)}<small>${DOW[c.visit_dow]}요일 방문</small></div><i>→</i>
+  <div><small>🏢 지점</small>${esc(c.branch_name)}<small class="mono">${c.branch_code}</small></div><i>→</i>
+  <div><small>🗺️ 광역</small>${esc(c.region_name)}</div><i>→</i>
+  <div><small>🚚 배송 권역(노선)</small>${esc(c.route)}<small>${c.stop_seq}번째로 내림</small></div></div>`;
+// 장면 그림: [이모지, 설명, 움직임(pop·spin·drive·feed·dim)] 을 화살표로 잇는다. "|" 는 화살표 없는 띄움.
+const scene = (...items) => `<div class="scene mini" aria-hidden="true">${items.map((it, i) => it === "|" ? `<span style="width:22px"></span>` :
+  `${i && items[i-1] !== "|" ? '<span class="arrow">➜</span>' : ""}<div class="it ${it[2]||""}"><b>${it[0]}</b><small>${it[1]||""}</small></div>`).join("")}</div>`;
+const SCENES = [
+  () => scene(["📚","미리 대량 인쇄","dim"], ["🙋","손으로 뽑아 모으기","dim"], "|", ["🖨️","그 주 분량만 인쇄","pop"], ["📘","학생 한 명의 책"], ["🧒","방문 수업"]),
+  () => scene(["🧒","새 학생","pop"], ["👩‍🏫","교사"], ["🏢","지점"], ["🗺️","광역"], ["🚚","배송 권역"]),
+  () => scene(["🧒","학생마다"], ["📗","국어 6호"], "|", ["📘","수학 4호"], "|", ["📙","주당 분량","spin"], ["⏰","컷오프 전까지 조정"]),
+  () => scene(["📄","원고 PDF","feed"], ["📄","1쪽·2쪽…","feed"], ["📘","책 본문"], "|", ["✍️","이름은 따로 얹기","spin"]),
+  () => scene(["⏰","컷오프","spin"], ["📋","학생별 주문 확정"], ["📘","한 권으로 합본"], ["🔢","코드 부여","pop"]),
+  () => scene(["🚚","권역"], ["🏢","지점"], ["👩‍🏫","교사"], ["📅","방문 요일"], ["🧒","학생"], "|", ["🖨️","이 순서대로 인쇄","pop"]),
+  () => scene(["🖥️","학생별 PDF"], ["📄","표지·본문","feed"], ["🧻","롤 용지에 배열"], ["✂️","재단 표시","spin"]),
+  () => scene(["🧻","롤 용지"], ["🖨️","인쇄","pop"], ["📄","접기","feed"], ["📎","중철 제본","spin"], ["🔍","QR 코드 검수"]),
+  () => scene(["📘","책"], ["🧺","교사 묶음","pop"], ["📦","지점 박스"], ["🚚","권역 차량","drive"]),
+  () => scene(["🚚","배송","drive"], ["🏢","지점 입고"], ["👩‍🏫","교사 수령"], ["🧒","학생 전달","pop"]),
+  () => scene(["👩‍🏫","지난 책 확인","spin"], ["✅","다 했다"], "|", ["⏳","다 못 했다"], ["⏸️","그 과목은 쉬기","pop"]),
+  () => scene(["📗","국어","pop"], ["🖨️","인쇄"], "|", ["📘","수학","dim"], ["⏸️","이번 주는 안 만듦"]),
+  () => scene(["⏸️","한 주 쉼","dim"], ["▶️","멈춘 호에서 다시","pop"], ["📘","수학"], ["🧒","이어서 공부"]),
+  () => scene(["✏️","채점"], ["📸","사진 한 장","pop"], ["🔎","쪽 QR 코드 읽기","spin"], ["🧒","누구의 몇 쪽인지 자동"], ["📕","오답 노트 재료"]),
+  () => scene(["🧒","가입"], ["📘","맞춤 책"], ["🚚","배송"], ["👩‍🏫","수업"], ["🎉","끝!","pop"]),
+];
+// 단계마다 실사 장면 사진(img/stepNN.jpg, tools/make_demo_images.py 로 만든다)과 한 줄 설명.
+const PHOTOS = [
+  "왼쪽: 미리 대량으로 찍어 쌓아 두고 사람이 뽑아 모으는 예전 방식. 오른쪽: 그 주에 필요한 만큼, 학생 한 명의 책으로 바로 찍어 내는 새 방식.",
+  "방문 교사가 가정에서 새 회원을 등록합니다. 교사만 정하면 지점·광역·배송 권역이 따라 정해집니다.",
+  "같은 학년이어도 과목마다 진도가 다릅니다. 교사는 컷오프 전까지 진도를 조정합니다.",
+  "교재 원고는 호마다 PDF 하나로 들어옵니다. 책을 만들 때 쪽 번호로 꺼내 얹습니다.",
+  "정해진 시각에 주문을 마감합니다. 그 순간의 진도대로 학생마다 이번 주 책이 확정됩니다.",
+  "권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 줄 세웁니다. 이 순서가 곧 분류 순서입니다.",
+  "학생마다 표지·본문 PDF가 만들어지고, 롤 용지 위에 재단 표시와 함께 배열됩니다.",
+  "롤 인쇄기가 찍고 중철 제본기가 묶으면, 카메라가 책마다 QR 코드를 읽어 빠진 책을 잡습니다.",
+  "찍혀 나온 순서대로 교사 묶음으로 끊어 담고, 지점 박스에 넣어 권역 차량에 싣습니다. 단계마다 스캔합니다.",
+  "지점에 도착한 묶음을 교사가 가져가, 방문 수업에서 학생에게 그 학생만의 책을 건넵니다.",
+  "다음 방문 때 교사는 지난 책을 다 했는지 기록합니다. 이 기록이 다음 교재를 만들지 말지를 정합니다.",
+  "다 못 한 과목은 다음 주에 새로 찍지 않습니다. 못 한 교재 위에 새 교재가 쌓이지 않습니다.",
+  "한 주 쉰 과목은 멈췄던 호에서 다시 이어 갑니다.",
+  "채점한 쪽을 휴대폰으로 찍어 올리면, 쪽 아래 QR 코드로 누구의 어느 책 몇 쪽인지 자동으로 정리됩니다.",
+  "가입부터 학생 손에 닿고, 수업 결과가 다음 교재로 이어지기까지 한 바퀴가 끝났습니다.",
+];
+const photo = i => `<figure class="photo"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="${esc(PHOTOS[i])}" loading="lazy"><span class="ai">AI 생성 장면 · 실제 인물 아님</span>
+  <figcaption><b>${i+1}. ${esc(STEPS[i].title)}</b>${esc(PHOTOS[i])}</figcaption></figure>`;
+const flow = () => `<h3>전체 흐름 한눈에 — 사진을 누르면 그 단계로 갑니다</h3><div class="flow">${STEPS.map((s, i) =>
+  `<button data-go="${i}"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="" loading="lazy"><span><small>${i+1}. ${esc(s.ch)}</small>${esc(s.title)}</span></button>`).join("")}</div>`;
+// 여정 지도: 책이 지나가는 정거장 [이모지, 이름, 해당 단계들]
+const JOURNEY = [["🧒","가입",[0,1]],["📚","진도·원고",[2,3]],["⏰","컷오프",[4]],["🗂️","인쇄 순서",[5,6]],["🖨️","인쇄·제본",[7]],["📦","분류·포장",[8]],["🚚","배송",[9]],["👩‍🏫","수업 확인",[10,11,12]],["📸","채점 사진",[13]],["🎉","정리",[14]]];
+const journey = () => { const now = JOURNEY.findIndex(j => j[2].includes(ctx.step));
+  return `<div class="card" style="padding:4px 8px"><div class="journey">${JOURNEY.map((j, i) => `<button class="stop ${i<now?"past":i===now?"now":""}" data-go="${j[2][0]}"><span class="ico">${j[0]}</span>${j[1]}</button>`).join("")}</div></div>`; };
+const TEACHER_TINTS = ["#fde68a","#bfdbfe","#fecaca","#bbf7d0","#ddd6fe","#fed7aa"];
+async function student(){ return ctx.sid ? api(`/api/students/${ctx.sid}`) : null; }
+async function bookOf(cycleId){
+  const s = await student(); if(!s || !cycleId) return null;
+  const cyc = (await api("/api/cycles")).find(c => c.id === cycleId); if(!cyc) return null;
+  const b = s.books.find(x => x.cycle_code === cyc.code && x.status !== "defect");
+  return b ? api(`/api/books/${b.id}`) : null;
+}
+const bookCard = b => !b ? "" : `<div class="scroll"><table><tr><th>구성</th><th>호</th><th>쪽</th></tr>
+  <tr><td>표지(앞·주간 계획·확인란·뒤)</td><td></td><td>4</td></tr>
+  ${b.items.map(i => `<tr><td>${i.kind==="unit"?esc(i.subject_name):i.kind==="review"?"오답 노트":"메모(쪽수 맞춤)"}</td><td>${esc(i.title||"")}</td><td>${i.pages}</td></tr>`).join("")}
+  <tr class="me"><td>합계</td><td>${esc(b.title)}</td><td>${b.pages}쪽 = 대지 ${b.sheets}장</td></tr></table></div>`;
+function anatomy(code){ const p = [[code[0],"종류: 책"],[code.slice(1,5),"연도·주차"],[code.slice(5,11),"이번 주 일련번호"],[code[11],"재인쇄 차수"],[code.slice(12),"검증 숫자"]];
+  return `<div class="code">${p.map(([v,l]) => `<span>${v}<small>${l}</small></span>`).join("")}</div>`; }
+async function sim(until){ return api(`/api/cycles/${ctx.c1}/simulate`, {until}); }
+async function openAndFreeze(key){ const c = await api("/api/cycles", {}); const st = await api(`/api/cycles/${c.id}/freeze`, {}); ctx[key] = c.id; ctx[key+"stats"] = st; ctx[key+"code"] = c.code; return st; }
+const need = (cond, text) => cond ? "" : `<div class="note warn">${text}</div>`;
+
+const STEPS = [
+{ch:"회원과 교재 준비", title:"시연 준비", async view(){
+  const m = META.counts;
+  return `<p class="lead">지금까지는 교재를 <b>미리 대량으로 찍어 두고</b> 학생마다 여러 과목에서 조금씩 뽑아 모았습니다. 이 시스템은 <b>학생의 수업 일정에 맞춰 그 주 분량만 찍어 한 권으로</b> 만들고, 찍혀 나온 순서 그대로 교사·지점·권역으로 내려보냅니다.</p>
+  <div class="why">이 시연은 실제 시스템을 그대로 움직입니다. 단계마다 버튼을 누르면 진짜 데이터가 바뀌고, 한 학생을 처음부터 끝까지 따라갑니다.</div>
+  <h3>조직은 이렇게 엮여 있습니다</h3>
+  <div class="chain"><div><small>🚚 배송 권역(노선)</small>${num(m.regions)}개</div><i>›</i><div><small>🗺️ 광역</small>${num(m.regions)}곳</div><i>›</i><div><small>🏢 지점</small>${num(m.branches)}곳</div><i>›</i><div><small>👩‍🏫 교사</small>${num(m.teachers)}명</div><i>›</i><div><small>🧒 학생</small>${num(m.students)}명</div></div>
+  <p class="mute">학생을 교사에게 맡기면 지점·광역·배송 권역은 교사의 소속을 따라 자동으로 정해집니다.</p>
+  <div class="row"><button class="b p" data-act="reset">시연 데이터로 처음부터 시작</button><span class="mute">지금 DB를 지우고 가상 학생 1,460명으로 다시 만듭니다.</span></div>
+  ${flow()}
+  <p class="mute">사진은 이해를 돕기 위해 AI로 만든 장면입니다. 사람·장소·설비는 모두 지어낸 것이며 실제 고객사와 관계없습니다.</p>`; },
+  acts:{ async reset(){ if(!confirm("지금 DB의 모든 내용을 지우고 시연 데이터를 다시 만듭니다. 계속할까요?")) return; await api("/api/reset", {confirm:"RESET"}); ctx = {step:0, done:{0:true}}; META = await api("/api/meta"); msg = ["ok","처음 상태로 만들었습니다. 다음 단계로 넘어가세요."]; } } },
+
+{ch:"회원과 교재 준비", title:"신규 회원 가입", async view(){
+  const [org, subjects, s] = await Promise.all([api("/api/org"), api("/api/subjects"), student()]);
+  if(s) return `<p class="lead"><b>${esc(s.name)}</b> 학생이 가입했습니다. 교사 한 명을 정했을 뿐인데 지점·광역·배송 권역까지 한 줄로 이어졌습니다.</p>${chain(s.chain)}
+    <div class="why">이 한 줄이 나중에 <b>인쇄 순서</b>가 됩니다. 권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍기 때문에, 찍혀 나온 책을 다시 분류할 필요가 없습니다.</div>`;
+  return `<p class="lead">새 학생이 들어왔습니다. 이름과 학년, 배울 과목과 시작할 호, 담당 교사와 방문 요일을 정합니다.</p>
+  <div class="row"><label>이름 <input id="j-name" value="한지우" style="width:110px"></label><label>학년 <select id="j-grade">${["7세","초1","초2","초3","초4","초5","초6"].map(g=>`<option ${g==="초2"?"selected":""}>${g}</option>`).join("")}</select></label>
+    <label>방문 요일 <select id="j-dow">${DOW.slice(0,6).map((d,i)=>`<option value="${i}" ${i===2?"selected":""}>${d}</option>`).join("")}</select></label></div>
+  <div class="row" style="margin-top:8px"><label>담당 교사 <select id="j-teacher">${org.map(t=>`<option value="${t.id}">${esc(t.route)} › ${esc(t.branch_name)} › ${esc(t.name)}</option>`).join("")}</select></label></div>
+  <h3>배울 과목과 시작 호</h3>
+  <div class="row">${subjects.map(sb=>`<label><input type="checkbox" data-subj="${sb.id}" ${["MAT","KOR"].includes(sb.code)?"checked":""}>${esc(sb.name)} <input type="number" data-seq="${sb.id}" value="${sb.code==="MAT"?3:5}" min="1" max="${sb.units}" style="width:64px">호부터</label>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><button class="b p" data-act="join">가입 처리</button></div>`; },
+  acts:{ async join(){ const enrollments = [...document.querySelectorAll("[data-subj]:checked")].map(c => ({subject_id:Number(c.dataset.subj), next_seq:Number($(`[data-seq="${c.dataset.subj}"]`).value)}));
+    const r = await api("/api/students", {name:$("#j-name").value, grade:$("#j-grade").value, visit_dow:Number($("#j-dow").value), teacher_id:Number($("#j-teacher").value), enrollments});
+    ctx.sid = r.id; ctx.done[1] = true; msg = ["ok", `${r.name} 학생을 등록했습니다 (${r.code}).`]; } } },
+
+{ch:"회원과 교재 준비", title:"개별 진도", async view(){
+  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
+  return `<p class="lead">학생마다 과목별로 <b>다음에 나갈 호</b>와 <b>주당 분량</b>이 따로 있습니다. 같은 학년이어도 진도는 모두 다릅니다.</p>
+  <div class="scroll"><table><tr><th>과목</th><th>다음 주에 나갈 호</th><th>쪽</th><th>주당</th><th>진도</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${e.units.map(u=>esc(u.title)).join(", ")||'<span class="mute">없음</span>'}</td><td>${e.units.reduce((a,u)=>a+u.pages,0)}</td><td>${e.units_per_week}호</td><td>${e.next_seq} / ${e.last_seq}호</td></tr>`).join("")}</table></div>
+  <div class="why">교사는 <b>컷오프(주문 마감) 전까지</b> 진도를 바꿀 수 있습니다: 복습(되돌리기), 건너뛰기, 주당 분량, 휴회, 중단. 바꾼 내용은 누가 언제 바꿨는지 모두 남습니다.</div>
+  <div class="row"><button class="b" data-act="pace">수학을 주 2호로 늘려 보기</button><button class="b" data-act="back">수학을 주 1호로 되돌리기</button></div>`; },
+  acts:{ async pace(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:2, actor:"시연"}); ctx.done[2] = true; msg = ["ok", `${e.subject_name} 주당 분량을 2호로 바꿨습니다. 위 표가 바뀐 것을 보세요.`]; },
+    async back(){ const s = await student(); const e = s.plan.find(x => x.subject_code === "MAT") || s.plan[0]; await api(`/api/enrollments/${e.id}/adjust`, {kind:"pace", value:1, actor:"시연"}); ctx.done[2] = true; msg = ["ok", `${e.subject_name} 주당 분량을 1호로 되돌렸습니다.`]; } } },
+
+{ch:"회원과 교재 준비", title:"교재 원고", async view(){
+  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
+  const units = s.plan.flatMap(e => e.units);
+  return `<p class="lead">교재 원고는 <b>호(한 주 분량)마다 PDF 하나</b>로 들어옵니다. 책을 만들 때 그 PDF의 1쪽, 2쪽…을 꺼내 얹기 때문에 미리 쪽 단위로 쪼개 둘 필요가 없습니다.</p>
+  <div class="scroll"><table><tr><th>이 학생이 다음에 받을 호</th><th>쪽</th><th>원고</th></tr>${units.map(u=>`<tr><td>${esc(u.title)}</td><td>${u.pages}</td><td>${u.asset_path?chip("원고 등록됨","ok"):chip("아직 없음 — 자리표시 쪽으로 나옴")}</td></tr>`).join("")}</table></div>
+  <div class="why">쪽수는 <b>원고가 기준</b>입니다. 원고를 붙이면 호의 쪽수가 원고에 맞춰집니다. 글꼴은 윤곽선으로 바뀐 상태로 받고, 학생 이름 같은 내용은 인쇄 때 따로 얹습니다.</div>
+  <div class="row"><button class="b p" data-act="assets" ${units.every(u=>u.asset_path)?"disabled":""}>이 호들에 견본 원고 붙이기</button><span class="mute">실제 원고 대신 견본 PDF를 만들어 붙입니다(호마다 1~2초).</span></div>`; },
+  acts:{ async assets(){ const s = await student(); let n = 0; for(const u of s.plan.flatMap(e => e.units)) if(!u.asset_path){ await api(`/api/units/${u.id}/sample`, {}); n++; } ctx.done[3] = true; msg = ["ok", `견본 원고 ${n}개를 붙였습니다.`]; } } },
+
+{ch:"주문에서 인쇄까지", title:"컷오프 — 주문 확정과 코드", async view(){
+  const s = await student(); if(!s) return need(false, "먼저 2단계에서 학생을 가입시켜 주세요.");
+  if(!ctx.c1) return `<p class="lead">매주 정해진 시각(방문 주 ${META.cutoff.days_before_week}일 전 ${META.cutoff.hour}시)에 <b>컷오프</b>를 합니다. 그 순간의 진도대로 학생마다 그 주에 받을 책이 확정됩니다.</p>
+    <div class="why">확정된 책은 바뀌지 않습니다. 컷오프 뒤에 바꾼 진도는 다음 주에 반영됩니다. 그래야 공장이 흔들리지 않습니다.</div>
+    <div class="row"><button class="b p" data-act="freeze">다음 주 사이클을 열고 주문 확정</button></div>`;
+  const b = await bookOf(ctx.c1), st = ctx.c1stats;
+  return `<p class="lead"><b>${ctx.c1code}</b> 주문이 확정됐습니다. 학생 ${num(st.students)}명에게 책 ${num(st.books)}권, 모두 ${num(st.pages)}쪽입니다.</p>
+  <h3>${esc(s.name)} 학생의 책</h3>${bookCard(b)}
+  <div class="why">여러 과목을 <b>한 권으로 합칩니다</b>. 중철 제본이라 쪽수는 4의 배수여야 해서, 모자라면 메모 쪽을 넣어 맞춥니다.</div>
+  <h3>주문이 코드가 됩니다</h3>${b?anatomy(b.code):""}
+  <p class="mute">이 코드가 책 표지와 뒤표지에 QR 코드로 찍히고, 공장에서 학생 손까지 모든 단계에서 스캔됩니다. 코드에는 개인정보가 없습니다. 검증 숫자가 있어 잘못 읽으면 바로 걸러집니다.</p>`; },
+  acts:{ async freeze(){ const st = await openAndFreeze("c1"); ctx.done[4] = true; msg = ["ok", `책 ${num(st.books)}권을 확정했습니다.`]; } } },
+
+{ch:"주문에서 인쇄까지", title:"생산 계획 — 인쇄 순서가 분류 순서", async view(){
+  if(!ctx.c1) return need(false, "먼저 5단계에서 주문을 확정해 주세요.");
+  const b = await bookOf(ctx.c1);
+  if(!b || !b.batch_id) return `<p class="lead">확정된 책을 <b>배송 권역 → 지점(내리는 순서) → 교사 → 방문 요일 → 학생</b> 순으로 줄 세웁니다. 이 순서대로 찍으면 제본기에서 나오는 책이 이미 교사별로 모여 있습니다.</p>
+    <div class="why">예전에는 다 찍은 뒤에 사람이 학생별·교사별로 모았습니다. 이제는 <b>모으는 일이 없고, 교사 경계에서 끊어 담기만</b> 합니다.</div>
+    <div class="row"><button class="b p" data-act="plan">생산 계획 세우기</button></div>`;
+  return `<p class="lead">계획이 섰습니다. ${esc(b.student_name)} 학생의 책이 어디에 놓였는지 보세요.</p>
+  <div class="chain"><div><small>🖨️ 인쇄 배치</small><span class="mono">${b.batch_code}</span><small>${b.seq_in_batch}번째로 인쇄</small></div><i>→</i><div><small>🧺 교사 묶음</small>${esc(b.teacher_name)}<small>${b.pack_seq} / ${b.pack_expected}번째 · <span class="mono">${b.pack_code}</span></small></div><i>→</i><div><small>📦 지점 박스</small>${esc(b.branch_name)}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 배송 권역</small>${esc(b.route)}</div></div>
+  <h3>제본기에서 나오는 순서 그대로 (색 = 교사)</h3>
+  <div class="tiles">${(() => { const tint = {}; let last = null, html = "";
+    for(const n of b.neighbors){ tint[n.teacher_name] ??= TEACHER_TINTS[Object.keys(tint).length % TEACHER_TINTS.length];
+      if(last !== null && last !== n.teacher_name) html += `<div class="tile slip"><b>📄</b>묶음표<br>(교사 바뀜)</div>`;
+      last = n.teacher_name;
+      html += `<div class="tile ${n.id===b.id?"me":""}" style="background:${tint[n.teacher_name]};color:#1d1f24"><b>${n.id===b.id?"⭐":"📘"}</b>${esc(n.student_name)}<br>${DOW[n.visit_dow]}요일 · ${n.seq_in_batch}번</div>`; }
+    return html; })()}</div>
+  <p class="mute">⭐ 이 우리 학생입니다. 같은 색(같은 교사)끼리 이미 붙어서 나오므로, 색이 바뀌는 자리에서 끊어 담기만 하면 됩니다.</p>
+  <h3>인쇄 순서에서 앞뒤에 놓인 책</h3><div class="scroll"><table><tr><th>인쇄 순번</th><th>지점</th><th>교사</th><th>방문</th><th>학생</th><th>묶음 안 순번</th></tr>${b.neighbors.filter(n => Math.abs(n.seq_in_batch - b.seq_in_batch) <= 3).map(n=>`<tr class="${n.id===b.id?"me":""}"><td>${n.seq_in_batch}</td><td>${esc(n.branch_name)}</td><td>${esc(n.teacher_name)}</td><td>${DOW[n.visit_dow]}</td><td>${esc(n.student_name)}</td><td>${n.pack_seq}</td></tr>`).join("")}</table></div>
+  <p class="mute">같은 교사의 학생이 방문 요일 순으로 나란히 있습니다. 교사가 바뀌는 자리에는 묶음표(간지)가 한 장 들어갑니다.</p>`; },
+  acts:{ async plan(){ const r = await api(`/api/cycles/${ctx.c1}/plan`, {}); ctx.done[5] = true; msg = ["ok", `인쇄 배치 ${r.batches}개 · 교사 묶음 ${r.packs}개 · 지점 박스 ${r.boxes}개 · 권역 ${r.routes}개로 편성했습니다.`]; } } },
+
+{ch:"주문에서 인쇄까지", title:"인쇄 데이터", async view(){
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const w = META.web;
+  return `<p class="lead">이제 이 학생만을 위한 PDF가 만들어집니다. 표지에 이름과 이번 주 구성, 배송 분류 정보와 QR 코드가 들어가고, 본문에는 원고가 그대로 얹힙니다.</p>
+  <div class="row"><button class="b p" data-pdf="book" data-id="${b.id}">책 PDF 보기</button><button class="b" data-pdf="imposed" data-id="${b.id}">인쇄용 터잡기 PDF 보기</button><button class="b" data-pdf="pack" data-id="${b.pack_id}">교사 묶음표 보기</button></div>
+  <div class="why">롤 용지(폭 ${w.web_mm}mm, 인쇄 가능 ${w.printable_mm}mm)에 펼친 면을 ${w.rotated?"돌려서 ":""}${w.lanes}줄로 앉히고, 재단용 여백을 사방 ${w.bleed_mm}mm 둡니다. 본문 쪽마다 아래에 책 코드와 쪽 번호가 작게 찍혀 낱장이 빠지거나 섞이면 알 수 있습니다.</div>
+  <p class="mute">뒤표지에는 권역·지점·교사·방문일·묶음 순번이 크게 찍혀, 스캐너가 없어도 손으로 나눌 수 있습니다.</p>`; },
+  acts:{} },
+
+{ch:"주문에서 인쇄까지", title:"인쇄와 제본 검수", async view(){
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  return `<p class="lead">인쇄하고 중철로 묶은 뒤, 책마다 QR 코드를 한 번 읽습니다. 이것이 <b>제본 검수</b>입니다.</p>
+  <p>${esc(b.student_name)} 학생의 책: ${stat(b.status)}</p>
+  <div class="why">인쇄 순서대로 나와야 하므로, <b>건너뛴 책이 있으면 그 자리에서 경고</b>합니다. 빠진 책을 출고 직전이 아니라 제본기 앞에서 알게 됩니다. 불량이면 "불량 등록"을 하고, 재인쇄본이 급행으로 다시 찍혀 같은 묶음 자리로 돌아옵니다.</div>
+  <div class="row"><button class="b p" data-act="bind" ${["planned","printed"].includes(b.status)?"":"disabled"}>인쇄하고 제본 검수까지 진행</button><span class="mute">이번 주 책 전체를 실제 스캔 규칙으로 처리합니다(몇 초 걸립니다).</span></div>`; },
+  acts:{ async bind(){ const r = await sim("bind"); ctx.done[7] = true; msg = ["ok", `${num(r.print)}권 인쇄, ${num(r.bind)}권 검수 완료.`]; } } },
+
+{ch:"아래로 내려보내기", title:"교사 묶음 · 지점 박스 · 권역 상차", async view(){
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const look = b.box_code ? await api(`/api/lookup?code=${b.box_code}`).catch(()=>null) : null;
+  return `<p class="lead">이제 위에서 정한 줄을 거꾸로 타고 내려갑니다: 책을 <b>교사 묶음</b>에, 묶음을 <b>지점 박스</b>에, 박스를 <b>권역 차량</b>에 싣습니다. 단계마다 QR 코드를 읽습니다.</p>
+  <div class="chain"><div><small>📘 책</small>${stat(b.status)}<small class="mono">${b.code}</small></div><i>→</i><div><small>🧺 교사 묶음</small>${esc(b.teacher_name)}<small class="mono">${b.pack_code}</small></div><i>→</i><div><small>📦 지점 박스</small>${esc(b.branch_name)} ${look?chip(META.status[look.status]||look.status, look.status==="open"?"warn":"ok"):""}<small class="mono">${b.box_code}</small></div><i>→</i><div><small>🚚 배송 권역</small>${esc(b.route)}<small>${look&&look.waybill?`운송장 ${esc(look.waybill)}`:"아직 상차 전"}</small></div></div>
+  <div class="why"><b>틀리면 그 자리에서 막습니다.</b> 다른 교사의 책을 묶음에 넣으면 스캔이 거부되고 어디로 보내야 하는지 알려 줍니다. 덜 찬 묶음은 박스에 못 넣고, 덜 찬 박스는 차에 못 싣습니다.</div>
+  ${ctx.wrong?`<div class="note bad">거부됨 — ${esc(ctx.wrong)}</div>`:""}
+  <div class="row"><button class="b" data-act="wrong" ${b.status==="bound"?"":"disabled"}>일부러 다른 교사 묶음에 넣어 보기</button><button class="b p" data-act="load" ${["bound","packed"].includes(b.status)?"":"disabled"}>묶음 포장 → 박스 → 상차까지 진행</button></div>
+  ${b.status==="printed"||b.status==="planned"?need(false,"먼저 8단계에서 제본 검수까지 진행해 주세요."):""}`; },
+  acts:{ async wrong(){ const b = await bookOf(ctx.c1); const tree = await api(`/api/cycles/${ctx.c1}/tree`);
+      const other = tree.flatMap(r => r.boxes).flatMap(x => x.packs).find(p => p.code !== b.pack_code && p.status === "open");
+      const r = await api("/api/scan", {station:"pack", code:b.code, context:other.code, operator:"시연"}); ctx.wrong = r.message; msg = [r.ok?"ok":"bad", r.ok?"들어가 버렸습니다(예상 밖).":`스캔 거부: ${r.message}`]; },
+    async load(){ const r = await sim("load"); ctx.done[8] = true; msg = ["ok", `책 ${num(r.pack)}권을 묶음 ${num(r.box)}개에 담고, 박스 ${num(r.load)}개를 실었습니다.`]; } } },
+
+{ch:"아래로 내려보내기", title:"지점 입고 · 교사 수령 · 학생 전달", async view(){
+  const b = await bookOf(ctx.c1); if(!b || !b.batch_id) return need(false, "먼저 6단계에서 생산 계획을 세워 주세요.");
+  const flow = ["planned","printed","bound","packed","shipped","received","handed","delivered"], at = flow.indexOf(b.status);
+  return `<p class="lead">차가 지점에 도착하면 박스를 읽고(입고), 교사가 자기 묶음을 읽고 가져가고(수령), 방문 수업에서 학생에게 주며 책을 읽습니다(전달).</p>
+  <div class="row">${flow.map((s,i)=>chip(`${["📋","🖨️","📎","🧺","🚚","🏢","👩‍🏫","🧒"][i]} ${META.status[s]}`, i<=at?"ok":"")).join(" → ")}</div>
+  <h3>이 책이 지나온 길(스캔 기록)</h3><div class="scroll"><table><tr><th>시각</th><th>어디서</th><th>결과</th><th>내용</th></tr>${b.history.map(h=>`<tr><td>${esc(h.ts.replace("T"," "))}</td><td>${esc(META.stations[h.station]||h.station)}</td><td>${h.ok?chip("확인","ok"):chip("거부","bad")}</td><td>${esc(h.message||"")}</td></tr>`).join("")||'<tr><td class="mute">아직 기록이 없습니다.</td></tr>'}</table></div>
+  <div class="why">박스가 움직이면 안에 든 묶음과 책의 상태가 함께 바뀝니다. 본사·지점·교사 누구나 <b>책 코드 하나로 지금 어디 있는지</b> 조회할 수 있습니다. 거부된 스캔까지 모두 기록에 남습니다.</div>
+  <div class="row"><button class="b p" data-act="deliver" ${b.status==="shipped"?"":"disabled"}>지점 입고 → 교사 수령 → 학생 전달까지 진행</button></div>
+  ${at<4?need(false,"먼저 9단계에서 상차까지 진행해 주세요."):""}`; },
+  acts:{ async deliver(){ const r = await sim("deliver"); ctx.done[9] = true; msg = ["ok", `박스 ${num(r.recv)}개 입고, 묶음 ${num(r.hand)}개 수령, 책 ${num(r.deliver)}권 전달.`]; } } },
+
+{ch:"수업과 다음 주", title:"수업 확인 — 다 했는가", async view(){
+  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return need(false, "먼저 10단계에서 학생 전달까지 진행해 주세요.");
+  const s = await student(), math = b.items.find(i => i.kind==="unit" && i.subject_name==="수학") || b.items.find(i => i.kind==="unit");
+  return `<p class="lead">교사는 다음 방문 때 <b>지난 책을 다 했는지</b> 확인합니다. 이 한 번의 확인이 다음 교재를 만들지 말지를 정합니다.</p>
+  <p>지금 기록: ${b.lesson?chip(META.lesson[b.lesson.result], b.lesson.result==="done"?"ok":"warn")+(b.lesson.note?` <span class="mute">${esc(b.lesson.note)}</span>`:""):chip("아직 확인 안 함")}</p>
+  <div class="scroll"><table><tr><th>과목</th><th>다음에 나갈 호</th><th>다음 컷오프</th></tr>${s.plan.map(e=>`<tr><td>${esc(e.subject_name)}</td><td>${e.next_seq}호</td><td>${e.hold_next?chip("생산 보류 — "+(e.hold_reason||"학습 지연"),"warn"):chip("정상 생산","ok")}</td></tr>`).join("")}</table></div>
+  <div class="why"><b>교재는 진도표대로 무조건 나가지 않습니다.</b> "일부만 했다"나 "결석"으로 기록하면 그 과목은 다음 컷오프 한 번을 쉽니다. 못 한 교재 위에 새 교재가 쌓이지 않습니다.</div>
+  <div class="row"><button class="b p" data-act="late" data-subject="${math.subject_id}">${esc(math.subject_name)}을(를) 다 못 했다고 기록(지연)</button><button class="b" data-act="alldone">모두 완료로 기록</button></div>`; },
+  acts:{ async late(el){ const b = await bookOf(ctx.c1); const r = await api(`/api/books/${b.id}/lesson`, {result:"partial", note:"절반만 풀었음", subject_ids:[Number(el.dataset.subject)], actor:"시연 교사"}); ctx.done[10] = true; msg = ["warn", `지연으로 기록했습니다. ${r.held_subjects.join(", ")} 과목은 다음 컷오프에서 생산하지 않습니다.`]; },
+    async alldone(){ const b = await bookOf(ctx.c1); await api(`/api/books/${b.id}/lesson`, {result:"done", actor:"시연 교사"}); ctx.done[10] = true; msg = ["ok", "완료로 기록했습니다. 다음 컷오프에서 모든 과목이 정상 생산됩니다."]; } } },
+
+{ch:"수업과 다음 주", title:"다음 주 컷오프 — 지연된 과목은 나가지 않는다", async view(){
+  if(!ctx.done[10]) return need(false, "먼저 11단계에서 수업 확인을 기록해 주세요.");
+  if(!ctx.c2) return `<p class="lead">한 주가 지나 다음 컷오프입니다. 지연으로 기록된 과목이 정말 빠지는지 확인합니다.</p><div class="row"><button class="b p" data-act="next">다음 주 사이클을 열고 주문 확정</button></div>`;
+  const [b1, b2, held, s] = await Promise.all([bookOf(ctx.c1), bookOf(ctx.c2), api(`/api/cycles/${ctx.c2}/held`), student()]);
+  const mine = held.filter(h => h.ref_code === s.code);
+  return `<p class="lead"><b>${ctx.c2code}</b> 주문을 확정했습니다. 이번 주에 <b>${num(ctx.c2stats.held)}건</b>이 학습 지연으로 생산에서 빠졌습니다.</p>
+  ${mine.map(h=>`<div class="note warn">${esc(h.detail)}</div>`).join("")||`<div class="note ok">${esc(s.name)} 학생은 지연 기록이 없어 모든 과목이 정상 생산됐습니다.</div>`}
+  <h3>${esc(s.name)} 학생 — 지난주 책과 이번 주 책</h3>
+  <div class="scroll"><table><tr><th>주</th><th>들어간 호</th><th>쪽</th></tr>
+    <tr><td>${ctx.c1code}</td><td>${b1?b1.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", "):""}</td><td>${b1?b1.pages:""}</td></tr>
+    <tr class="me"><td>${ctx.c2code}</td><td>${b2?b2.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", "):"책 없음(모든 과목 보류)"}</td><td>${b2?b2.pages:"-"}</td></tr></table></div>
+  <div class="why">빠진 과목의 "다음에 나갈 호"는 <b>그대로 남아 있습니다</b>. 건너뛰는 것이 아니라 한 주 쉬는 것입니다. 종이도, 인쇄도, 배송도 그만큼 줄어듭니다.</div>`; },
+  acts:{ async next(){ const st = await openAndFreeze("c2"); ctx.done[11] = true; msg = ["ok", `책 ${num(st.books)}권 확정, 학습 지연 보류 ${num(st.held)}건.`]; } } },
+
+{ch:"수업과 다음 주", title:"다시 이어 가기", async view(){
+  if(!ctx.c2) return need(false, "먼저 12단계에서 다음 주 주문을 확정해 주세요.");
+  if(!ctx.c3) return `<p class="lead">보류는 <b>한 번</b>입니다. 그다음 주에는 멈춘 자리에서 다시 이어 갑니다. 여전히 못 했다면 교사가 다시 지연으로 기록하면 됩니다.</p><div class="row"><button class="b p" data-act="third">그다음 주 사이클을 열고 주문 확정</button></div>`;
+  const [b2, b3, s] = await Promise.all([bookOf(ctx.c2), bookOf(ctx.c3), student()]);
+  const list = b => b ? b.items.filter(i=>i.kind==="unit").map(i=>esc(i.title)).join(", ") : "책 없음";
+  return `<p class="lead"><b>${ctx.c3code}</b> 주문을 확정했습니다. 쉬었던 과목이 멈춘 호에서 다시 나갑니다.</p>
+  <div class="scroll"><table><tr><th>주</th><th>${esc(s.name)} 학생의 책에 들어간 호</th></tr><tr><td>${ctx.c2code}</td><td>${list(b2)}</td></tr><tr class="me"><td>${ctx.c3code}</td><td>${list(b3)}</td></tr></table></div>
+  <div class="why"><b>자동 보류도 있습니다.</b> 교사가 아무 기록도 하지 않은 채 수업 확인이 안 된 교재가 ${META.hold.max_unchecked_weeks}주치 쌓이면, 그 학생의 새 교재는 만들지 않습니다. 기록이 없어도 교재가 끝없이 쌓이지 않습니다.</div>`; },
+  acts:{ async third(){ const st = await openAndFreeze("c3"); ctx.done[12] = true; msg = ["ok", `책 ${num(st.books)}권 확정, 보류 ${num(st.held)}건.`]; } } },
+
+{ch:"수업과 다음 주", title:"채점 사진 — 누구 것인지 고르지 않는다", async view(){
+  const b = await bookOf(ctx.c1); if(!b || b.status !== "delivered") return need(false, "먼저 10단계에서 학생 전달까지 진행해 주세요.");
+  const s = await student(), g = s.gradings, last = ctx.grade;
+  return `<p class="lead">교사가 채점한 쪽을 <b>사진으로 찍어 올리기만</b> 하면, 그 쪽에 찍힌 고유 QR 코드로 누구의 어느 책, 어느 과목 몇 호 몇 쪽인지 시스템이 알아서 정리합니다.</p>
+  <div class="why">본문 쪽마다 아래 가운데에 <b>쪽 고유 QR 코드</b>가 있습니다(책 코드 + 쪽 번호). 학생이 수십 명이어도 교사는 학생을 고르거나 쪽을 적을 필요가 없습니다. 틀린 문항을 함께 표시하면 그 학생의 <b>약한 문항</b>으로 쌓여 나중에 오답 노트로 모아 찍힙니다.</div>
+  ${last?`<div class="chain"><div><small>사진 한 장</small>${esc(last.read_by)}</div><i>→</i><div><small>학생</small>${esc(last.book.student_name)}<small>${esc(last.book.cycle_code)}</small></div><i>→</i><div><small>과목·호</small>${esc(last.unit_title||last.part)}</div><i>→</i><div><small>쪽</small>${last.unit_page||"-"}쪽<small>책 전체에서는 ${last.page}쪽</small></div><i>→</i><div><small>틀린 문항</small>${last.wrong_items.join(", ")||"없음"}번<small>약한 문항에 추가됨</small></div></div>
+    ${last.image_file?`<p><a href="uploads/${esc(last.image_file)}" target="_blank">올라간 사진 보기</a></p>`:""}`:""}
+  <h3>${esc(s.name)} 학생에게 정리된 채점 사진</h3><div class="scroll"><table><tr><th>올린 때</th><th>호</th><th>쪽</th><th>틀린 문항</th></tr>${g.map(x=>`<tr><td>${esc(x.created_at.replace("T"," "))}</td><td>${esc(x.unit_title||"")}</td><td>${x.unit_page||""}</td><td>${esc(x.wrong_items||"")}</td></tr>`).join("")||'<tr><td class="mute">아직 없습니다.</td></tr>'}</table></div>
+  <h3>약한 문항(오답 노트 재료)</h3><div class="row">${s.weak.map(w=>chip(`${w.title} ${w.item_no}번`, w.status==="printed"?"ok":"warn")).join(" ")||'<span class="mute">아직 없습니다.</span>'}</div>
+  <div class="row" style="margin-top:12px"><button class="b p" data-act="photo">이 학생 책의 한 쪽을 찍어 올려 보기</button><span class="mute">책의 실제 쪽을 그림으로 만들어 사진처럼 올립니다. 틀린 문항 두 개를 함께 표시합니다.</span></div>
+  <p class="mute">진짜 사진으로 해 보려면 책 PDF를 인쇄해 채점한 뒤, 운영 화면의 "교사 화면 → 채점 사진 올리기"에서 올리세요.</p>`; },
+  acts:{ async photo(){ const b = await bookOf(ctx.c1); const n = (ctx.gradeN || 0); const page = 3 + n; const per = META.book.items_per_page;
+      const where = await api(`/api/grading/locate?code=${b.code}&page=${page}`);
+      const r = await api(`/api/books/${b.id}/grading-sample`, {page, wrong_items: where.items.length ? [where.items[1], where.items[per-1]] : []});
+      ctx.grade = r; ctx.gradeN = n + 1; ctx.done[13] = true; msg = ["ok", `사진 한 장으로 ${r.book.student_name} · ${r.unit_title||r.part} ${r.unit_page||""}쪽에 정리됐습니다 (${r.read_by}).`]; } } },
+
+{ch:"수업과 다음 주", title:"정리", async view(){
+  return `<p class="lead">한 학생을 따라 처음부터 끝까지 왔습니다.</p>
+  <div class="scroll"><table>
+  <tr><td>1</td><td><b>가입</b></td><td>교사만 정하면 지점·광역·배송 권역이 한 줄로 이어진다</td></tr>
+  <tr><td>2</td><td><b>진도</b></td><td>학생·과목마다 다음에 나갈 호와 분량이 따로 있고, 컷오프 전까지 바꿀 수 있다</td></tr>
+  <tr><td>3</td><td><b>원고</b></td><td>호마다 PDF 하나. 쪽은 번호로 꺼내 쓴다</td></tr>
+  <tr><td>4</td><td><b>컷오프</b></td><td>그 주에 받을 책이 확정되고 코드가 붙는다</td></tr>
+  <tr><td>5</td><td><b>인쇄</b></td><td>권역 → 지점 → 교사 → 방문 요일 → 학생 순으로 찍어서, 찍힌 순서가 곧 분류다</td></tr>
+  <tr><td>6</td><td><b>내려보내기</b></td><td>책 → 교사 묶음 → 지점 박스 → 권역 차량. 틀린 것은 스캔에서 막힌다</td></tr>
+  <tr><td>7</td><td><b>배송 확인</b></td><td>지점 입고·교사 수령·학생 전달까지 책 한 권 단위로 보인다</td></tr>
+  <tr><td>8</td><td><b>수업 확인</b></td><td>다 못 했으면 그 과목은 다음 주에 만들지 않는다</td></tr>
+  <tr><td>9</td><td><b>채점 사진</b></td><td>찍어 올리기만 하면 쪽 QR 코드로 학생·과목·쪽이 자동 정리되고, 틀린 문항은 오답 노트 재료가 된다</td></tr></table></div>
+  <h3>운영 화면에서 더 볼 수 있는 것</h3>
+  <p>약한 문항을 체크해 두었다가 모아 찍는 <b>오답 노트</b>, 불량 <b>재인쇄</b>와 묶음 누락 처리, 고객사 시스템과 주고받는 <b>연동 파일</b>, 회원 수를 넣어 보는 <b>물량·설비 환산</b>. <a class="live" href="/">운영 화면 열기</a></p>`; },
+  acts:{} },
+];
+
+function rail(){ let last = "", html = "";
+  STEPS.forEach((s, i) => { if(s.ch !== last){ html += `<h3>${s.ch}</h3>`; last = s.ch; }
+    html += `<button data-go="${i}" class="${i===ctx.step?"on":""} ${ctx.done[i]?"done":""}"><span class="n">${ctx.done[i]?"✓":i+1}</span>${s.title}</button>`; });
+  $("#rail").innerHTML = html; }
+// 발표 모드에서 → 를 누르면 먼저 실행하는 그 단계의 일(데이터를 지우는 초기화는 넣지 않는다)
+const AUTO = {1:["join","가입 처리"], 3:["assets","견본 원고 붙이기"], 4:["freeze","주문 확정"], 5:["plan","생산 계획 세우기"],
+  7:["bind","인쇄하고 제본 검수"], 8:["load","묶음 포장 → 박스 → 상차"], 9:["deliver","입고 → 교사 수령 → 학생 전달"],
+  10:["late","수업 확인(수학 지연) 기록"], 11:["next","다음 주 주문 확정"], 12:["third","그다음 주 주문 확정"], 13:["photo","채점 사진 올리기"]};
+const pending = () => { const a = AUTO[ctx.step]; if(!a || ctx.done[ctx.step]) return null;
+  const btn = document.querySelector(`#main [data-act="${a[0]}"]`); return btn && !btn.disabled ? [btn, a[1]] : null; };
+function bar(){ $("#bar-count").textContent = `${ctx.step+1} / ${STEPS.length}`;
+  $("#bar-prog").style.width = `${(ctx.step+1) / STEPS.length * 100}%`;
+  if(P.on) return playUi(); const p = pending(), last = ctx.step >= STEPS.length - 1;
+  $("#bar-hint").innerHTML = p ? `→ 누르면 <b>${esc(p[1])}</b>` : last ? "마지막 단계입니다" : `→ 다음: <b>${esc(STEPS[ctx.step+1].title)}</b>`; }
+let busy = false;
+async function runAct(btn){ const label = btn.textContent; btn.disabled = true; btn.textContent = "진행 중…";
+  busy = true; document.body.classList.add("busy");
+  try{ await STEPS[ctx.step].acts[btn.dataset.act](btn); }catch(err){ msg = ["bad", err.message]; btn.textContent = label; }
+  busy = false; document.body.classList.remove("busy"); await render();
+  // 발표 모드: 실행 결과가 사진 아래에 있으므로 결과 쪽으로 내려 보여 준다
+  if(document.body.classList.contains("show")) document.querySelector("#main .card .note")?.scrollIntoView({behavior:"smooth", block:"start"}); }
+async function go(step){ ctx.step = Math.max(0, Math.min(STEPS.length-1, step)); msg = null; window.scrollTo(0,0); return render(true); }
+async function forward(){ if(busy) return; const p = pending(); if(p) return runAct(p[0]); if(ctx.step < STEPS.length-1) return go(ctx.step+1); }
+async function render(fresh){ rail(); bar(); const s = STEPS[ctx.step]; let body;
+  if(typeof P !== "undefined" && P.on){ pointed = null; hideFinger(); }
+  try{ body = await s.view(); }catch(e){ body = `<div class="note bad">불러오지 못했습니다: ${esc(e.message)}</div>`; }
+  $("#main").className = fresh ? "fadein" : "";
+  $("#main").innerHTML = `${journey()}<div class="card"><div class="mute">${esc(s.ch)} · ${ctx.step+1} / ${STEPS.length}</div><h2>${esc(s.title)}</h2>${photo(ctx.step)}${SCENES[ctx.step] ? SCENES[ctx.step]() : ""}${msg?`<div class="note ${msg[0]}">${esc(msg[1])}</div>`:""}${body}</div>
+    <div class="nav"><button class="b" data-go="${ctx.step-1}" ${ctx.step?"":"disabled"}>← 이전</button><button class="b p" data-go="${ctx.step+1}" ${ctx.step<STEPS.length-1?"":"disabled"}>다음 →</button></div>`;
+  bar(); save(); }
+// 발표 모드: 전체 화면 + 키보드(→·Space·PageDown 앞으로, ←·PageUp 뒤로, F 전체 화면, Esc 끝)
+function showOn(){ document.body.classList.add("show"); document.documentElement.requestFullscreen?.().catch(() => {}); bar(); }
+function showOff(){ document.body.classList.remove("show"); if(document.fullscreenElement) document.exitFullscreen?.(); }
+$("#show-on").onclick = showOn; $("#show-off").onclick = () => { if(P.on) stopPlay(); showOff(); };
+$("#bar-next").onclick = forward; $("#bar-prev").onclick = () => !busy && go(ctx.step-1);
+document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement){ document.body.classList.remove("show"); if(P.on) stopPlay(); } });
+// ── 나레이션 자동 시연 ─────────────────────────────────────────────────
+// 대본(narration.json)과 음성(audio/sNN_intro|after.mp3, tools/make_demo_narration.py)으로
+// 단계마다: 화면 열기 → 설명(손가락이 가리킴) → 실행 → 결과 설명 → 다음 단계. 스페이스로 멈춤·계속.
+let NARR = [];
+// 음성 파일은 시작할 때 한 번에 모두 받아 메모리에 둔다 — 재생 중에는 네트워크를 쓰지 않아 끊기지 않는다.
+const CLIPS = {};
+async function preloadClips(){
+  const names = NARR.flatMap((n, i) => ["intro", "after"].filter(p => n[p]).map(p => `s${pad(i)}_${p}`)).filter(k => !CLIPS[k]);
+  if(!names.length) return;
+  bubble(`나레이션 음성을 준비하고 있습니다… (${names.length}개)`, "");
+  await Promise.all(names.map(async k => { try{ const r = await fetch(`audio/${k}.mp3`); if(r.ok) CLIPS[k] = URL.createObjectURL(await r.blob()); }catch(e){} })); }
+const P = {on:false, paused:false, gen:0, audio:null, skip:null, resume:null, rate:1.15};
+const pad = i => String(i).padStart(2, "0");
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const waitResume = () => P.paused ? new Promise(r => { P.resume = r; }) : Promise.resolve();
+let pointed = null;
+// 손가락은 문서 좌표(absolute)에 둔다 — 화면이 스크롤돼도 대상과 함께 움직이므로 따라잡을 필요가 없다.
+// 대상이 다시 그려져 사라졌으면(단계가 바뀔 때) 곧바로 숨긴다(예전에는 좌상단 0,0 으로 날아갔다).
+function hideFinger(){ const f = $("#finger"); f.style.display = "none"; f.className = ""; }
+function placeFinger(animate){ const f = $("#finger");
+  // 사진은 그 자체가 주인공이라 테두리만 빛내고 손가락은 쓰지 않는다(제목을 가리지 않게)
+  if(!pointed || !pointed.isConnected || !P.on || pointed.classList.contains("photo")) return hideFinger();
+  const r = pointed.getBoundingClientRect();
+  if(!r.width && !r.height) return hideFinger();
+  const right = r.left > 70, x = right ? r.left - 60 : r.left + Math.min(r.width / 2, 80),
+        y = right ? r.top + Math.min(r.height / 2, 40) - 24 : r.top - 56;
+  const visible = f.style.display === "block", left = Math.round(x + scrollX), top = Math.round(Math.max(4, y + scrollY));
+  // 이미 그 자리에 있으면 건드리지 않는다(애니메이션이 다시 시작되며 떨리지 않게)
+  if(visible && Math.abs(parseFloat(f.style.left) - left) <= 2 && Math.abs(parseFloat(f.style.top) - top) <= 2) return;
+  f.textContent = right ? "👉" : "👇";
+  const cls = `${right ? "r" : "d"}${visible && animate ? " move" : " show"}`;
+  if(f.className !== cls) f.className = cls;
+  f.style.left = `${left}px`; f.style.top = `${top}px`;
+  f.style.display = "block"; }
+// 재생 중에는 대상이 움직였는지(내용이 늦게 그려져 밀림 등) 0.4초마다 보고 조용히 따라간다
+setInterval(() => { if(P.on && pointed) placeFinger(true); }, 400);
+function point(sel){ document.querySelectorAll(".spot").forEach(x => x.classList.remove("spot"));
+  pointed = (sel && document.querySelector(sel)) || document.querySelector("#main .photo");
+  if(!pointed) return hideFinger();
+  pointed.classList.add("spot");
+  // 말풍선(화면 아래)에 가리지 않게, 대상이 화면 위쪽 1/5 쯤 오도록 스크롤한다
+  const top = pointed.getBoundingClientRect().top + scrollY - Math.max(70, innerHeight * 0.18);
+  scrollTo({top:Math.max(0, top), behavior:"smooth"});
+  placeFinger(true); }
+addEventListener("resize", () => placeFinger(false));
+function bubble(text, sub){ const b = $("#bubble"); if(text === null){ b.classList.remove("on"); return; }
+  $("#bubble-text").textContent = text; $("#bubble-sub").textContent = sub || ""; b.classList.add("on"); b.classList.toggle("paused", P.paused); }
+function speak(i, part, gen){ return new Promise(done => {
+  const text = NARR[i]?.[part]; if(!text || gen !== P.gen) return done();
+  point(NARR[i][part + "_point"]); bubble(text, `${i+1} / ${STEPS.length} · ${STEPS[i].title}`);
+  const finish = () => { P.audio = null; P.skip = null; done(); };
+  const a = new Audio(CLIPS[`s${pad(i)}_${part}`] || `audio/s${pad(i)}_${part}.mp3`); a.playbackRate = P.rate; a.preservesPitch = true;
+  P.audio = a; P.skip = () => { a.pause(); speechSynthesis?.cancel(); finish(); };
+  a.onended = finish;
+  const fallback = () => {          // 음성 파일이 없으면 브라우저 음성으로 읽는다
+    if(!window.speechSynthesis) return setTimeout(finish, text.length * 90 / P.rate);
+    const u = new SpeechSynthesisUtterance(text); u.lang = "ko-KR"; u.rate = P.rate; u.onend = finish; u.onerror = finish;
+    P.audio = {pause: () => speechSynthesis.pause(), play: () => speechSynthesis.resume()}; speechSynthesis.speak(u); };
+  a.onerror = fallback;
+  const start = () => a.play().catch(fallback);
+  P.paused ? (P.resume = start) : start(); }); }
+async function autoplay(from){
+  const gen = ++P.gen; P.skip?.(); P.on = true; P.paused = false; document.body.classList.add("playing"); playUi();
+  if(!NARR.length){ try{ NARR = await (await fetch("narration.json")).json(); }catch(e){ NARR = []; } }
+  await preloadClips(); if(gen !== P.gen) return;
+  for(let i = Math.max(0, from); i < STEPS.length; i++){
+    if(gen !== P.gen) return;
+    await go(i); await sleep(600); await waitResume(); if(gen !== P.gen) return;
+    await speak(i, "intro", gen); if(gen !== P.gen) return;
+    await waitResume(); if(gen !== P.gen) return;
+    const p = pending();
+    if(p){ bubble("실행 중입니다…", `${i+1} / ${STEPS.length} · ${STEPS[i].title}`); point(`[data-act="${p[0].dataset.act}"]`);
+      await runAct(p[0]); if(gen !== P.gen) return; await sleep(500); }
+    if(NARR[i]?.after){ await speak(i, "after", gen); if(gen !== P.gen) return; }
+    await waitResume(); await sleep(800);
+  }
+  if(gen === P.gen){ P.on = false; pointed = null; hideFinger(); bubble("시연을 마쳤습니다. ← 로 원하는 단계를 다시 볼 수 있습니다.", ""); playUi(); }
+}
+function stopPlay(){ P.gen++; P.skip?.(); P.on = false; P.paused = false; P.resume = null; pointed = null;
+  document.querySelectorAll(".spot").forEach(x => x.classList.remove("spot")); hideFinger(); bubble(null);
+  document.body.classList.remove("playing"); playUi(); }
+function togglePause(){ if(!P.on) return autoplay(ctx.step);
+  P.paused = !P.paused;
+  if(P.paused){ P.audio?.pause(); }
+  else { if(P.resume){ const r = P.resume; P.resume = null; r(); } else P.audio?.play(); }
+  $("#bubble").classList.toggle("paused", P.paused); playUi(); }
+function playUi(){ $("#bar-play").textContent = P.paused ? "▶ 계속" : "⏸ 일시정지";
+  if(P.on) $("#bar-hint").innerHTML = P.paused ? "<b>일시정지</b> · 스페이스로 계속" : "스페이스 멈춤 · → 건너뛰기 · ← 앞 단계"; else bar(); }
+// 시작 선택은 페이지 안 버튼으로 받는다. 브라우저는 '누른 그 순간'에만 전체 화면을 허락하므로
+// (확인 창을 거치거나 초기화를 기다린 뒤에 요청하면 조용히 거부된다) 누르자마자 전체 화면부터 켠다.
+function startPlay(){ $("#start").classList.add("on"); $("#start [data-start=fresh]").focus(); }
+$("#play-on").onclick = startPlay;
+$("#start").addEventListener("click", async e => {
+  const b = e.target.closest("[data-start]"); if(!b && e.target.id !== "start") return;
+  $("#start").classList.remove("on");
+  const how = b ? b.dataset.start : "cancel"; if(how === "cancel") return;
+  showOn();                                                  // 클릭 순간에 바로
+  if(how === "fresh"){ bubble("시연 데이터를 준비하고 있습니다…", ""); await api("/api/reset", {confirm:"RESET"});
+    ctx = {step:0, done:{0:true}}; META = await api("/api/meta"); }
+  autoplay(how === "fresh" ? 0 : ctx.step); });
+// 누른 뒤 포커스를 풀어 둔다 — 남아 있으면 스페이스가 이 버튼도 한 번 더 눌러 멈췄다 바로 다시 재생된다
+$("#bar-play").onclick = e => { e.currentTarget.blur(); togglePause(); };
+$("#bar-rate").onchange = e => { P.rate = Number(e.target.value); if(P.audio && "playbackRate" in P.audio) P.audio.playbackRate = P.rate; };
+document.addEventListener("keydown", e => {
+  if(e.target.closest("input,select,textarea") || e.ctrlKey || e.altKey || e.metaKey) return;
+  if($("#start").classList.contains("on")){ if(e.key === "Escape") $("#start").classList.remove("on"); return; }
+  const show = document.body.classList.contains("show");
+  if(P.on){                                   // 나레이션 진행 중
+    if(e.key === " "){ e.preventDefault(); togglePause(); }
+    else if(["ArrowRight","PageDown"].includes(e.key)){ e.preventDefault(); if(P.paused) togglePause(); P.skip?.(); }
+    else if(["ArrowLeft","PageUp"].includes(e.key)){ e.preventDefault(); if(!busy) autoplay(ctx.step - 1); }
+    else if(e.key === "Escape"){ stopPlay(); showOff(); }
+    return; }
+  if(["ArrowRight","PageDown"].includes(e.key) || (show && e.key === " ")){ e.preventDefault(); forward(); }
+  else if(["ArrowLeft","PageUp"].includes(e.key)){ e.preventDefault(); if(!busy) go(ctx.step-1); }
+  else if(e.key === "f" || e.key === "F"){ show ? showOff() : showOn(); }
+  else if(e.key === "Escape" && show) showOff();
+});
+if(new URLSearchParams(location.search).has("show")) document.body.classList.add("show");   // ?show 로 바로 발표 모드(전체 화면은 F 키)
+document.body.addEventListener("click", async e => {
+  const go_ = e.target.closest("[data-go]"), act = e.target.closest("[data-act]"), pdf = e.target.closest("[data-pdf]");
+  if(go_ && !go_.disabled) return P.on ? autoplay(Number(go_.dataset.go)) : go(Number(go_.dataset.go));
+  if(act && !act.disabled) return runAct(act);
+  if(pdf && !pdf.disabled){ const label = pdf.textContent; pdf.disabled = true; pdf.textContent = "만드는 중…";
+    try{ const r = await api("/api/pdf", {kind:pdf.dataset.pdf, id:Number(pdf.dataset.id)}); window.open(r.url, "_blank"); ctx.done[6] = true; msg = ["ok", `${r.pages}쪽 PDF를 만들었습니다. 새 창이 안 열리면 주소창에 ${r.url} 을 넣으세요.`]; }
+    catch(err){ msg = ["bad", err.message]; }
+    return render(); }
+});
+(async () => { META = await api("/api/meta");
+  if(ctx.sid){ try{ await api(`/api/students/${ctx.sid}`); }catch(e){ ctx = {step:0, done:{}}; } }   // DB가 초기화됐으면 처음부터
+  render(); })().catch(e => { $("#main").innerHTML = `<div class="card">불러오지 못했습니다: ${esc(e.message)}</div>`; });
+</script>
+
+</html>
