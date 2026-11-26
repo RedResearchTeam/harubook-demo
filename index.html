@@ -12,7 +12,9 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
 header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
-header h1{font-size:17px;margin:0}header a{color:var(--acc)}
+header h1{font-size:17px;margin:0}
+#lang{font:inherit;font-size:14px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+header a{color:var(--acc)}
 .wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:16px;max-width:1240px;margin:0 auto;padding:16px}
 @media (max-width:860px){.wrap{grid-template-columns:1fr}}
 .rail{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;align-self:start;position:sticky;top:12px}
@@ -137,14 +139,17 @@ body.playing .wrap{padding-bottom:230px}
 #start button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
 #start button small{display:block;font-weight:400;opacity:.8;font-size:13px}
 </style>
+</head>
+<body>
 <header><h1>하루책 시연 — 회원 가입부터 학생 손에 닿기까지</h1><span class="mute">모든 이름·지점은 지어낸 것입니다</span><span style="flex:1"></span>
+  <select id="lang" title="나레이션 언어 · Narration language · 旁白語言" aria-label="Narration language"><option value="ko">한국어</option><option value="en">English</option><option value="zh-TW">繁體中文</option></select>
   <button class="playbtn" id="play-on" title="나레이션과 함께 처음부터 끝까지 자동으로 진행합니다(스페이스: 일시정지)">🔊 시연 시작</button>
   <button class="showbtn" id="show-on" title="전체 화면으로 → ← 키로 직접 넘깁니다">▶ 전체 화면(직접 넘기기)</button><a class="live" href="/">운영 화면으로</a></header>
 <div id="start" role="dialog" aria-modal="true" aria-labelledby="start-title"><div class="box">
-  <h3 id="start-title">🔊 나레이션 시연</h3><p>전체 화면으로 바뀌고 나레이션과 함께 끝까지 저절로 진행합니다. 스페이스로 멈추고, Esc 로 끝냅니다.</p>
-  <button class="p" data-start="fresh">처음부터 시작<small>지금 DB를 시연 데이터로 되돌리고 1단계부터</small></button>
-  <button data-start="resume">지금 상태에서 이어서<small>데이터는 그대로, 지금 보고 있는 단계부터</small></button>
-  <button data-start="cancel">취소</button></div></div>
+  <div data-i18n="start"><h3 id="start-title">🔊 나레이션 시연</h3><p>전체 화면으로 바뀌고 나레이션과 함께 끝까지 저절로 진행합니다. 스페이스로 멈추고, Esc 로 끝냅니다.</p></div>
+  <button class="p" data-start="fresh" data-i18n="fresh">처음부터 시작<small>지금 DB를 시연 데이터로 되돌리고 1단계부터</small></button>
+  <button data-start="resume" data-i18n="resume">지금 상태에서 이어서<small>데이터는 그대로, 지금 보고 있는 단계부터</small></button>
+  <button data-start="cancel" data-i18n="cancel">취소</button></div></div>
 <div id="finger" aria-hidden="true">👉</div>
 <div id="bubble" aria-live="polite"><span class="who">🧑‍🏫<i><b></b><b></b><b></b></i></span><div><p id="bubble-text"></p><small id="bubble-sub"></small></div></div>
 <div class="wrap"><nav class="rail" id="rail"></nav><main id="main"></main></div>
@@ -215,10 +220,45 @@ const PHOTOS = [
   "채점한 쪽을 휴대폰으로 찍어 올리면, 쪽 아래 QR 코드로 누구의 어느 책 몇 쪽인지 자동으로 정리됩니다.",
   "가입부터 학생 손에 닿고, 수업 결과가 다음 교재로 이어지기까지 한 바퀴가 끝났습니다.",
 ];
-const photo = i => `<figure class="photo"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="${esc(PHOTOS[i])}" loading="lazy"><span class="ai">AI 생성 장면 · 실제 인물 아님</span>
-  <figcaption><b>${i+1}. ${esc(STEPS[i].title)}</b>${esc(PHOTOS[i])}</figcaption></figure>`;
+// ── 언어: 나레이션·자막·단계 제목·사진 설명만 바꾼다(화면 속 표·버튼·데이터는 한국어 그대로) ──
+const LANGS = {ko:"한국어", en:"English", "zh-TW":"繁體中文"}, VOICE_LANG = {ko:"ko-KR", en:"en-US", "zh-TW":"zh-TW"};
+let LANG = (() => { const q = new URLSearchParams(location.search).get("lang"); if(LANGS[q]) return q;
+  try{ const v = localStorage.getItem("harubook-lang"); if(LANGS[v]) return v; }catch(e){} return "ko"; })();
+const U = {
+  ko:{ai:"AI 생성 장면 · 실제 인물 아님", prep:n => `나레이션 음성을 준비하고 있습니다… (${n}개)`, run:"실행 중입니다…",
+      end:"시연을 마쳤습니다. ← 로 원하는 단계를 다시 볼 수 있습니다.", data:"시연 데이터를 준비하고 있습니다…",
+      pause:"⏸ 일시정지", cont:"▶ 계속", hintPaused:"<b>일시정지</b> · 스페이스로 계속", hintPlay:"스페이스 멈춤 · → 건너뛰기 · ← 앞 단계",
+      press:"→ 누르면", next:"→ 다음:", last:"마지막 단계입니다", play:"🔊 시연 시작"},
+  // 시작 창(한국어는 HTML 에 적힌 그대로 둔다)
+  en:{ai:"AI-generated scene · not real people", prep:n => `Loading narration audio… (${n})`, run:"Running…",
+      end:"The demo is over. Use ← to revisit any step.", data:"Preparing demo data…",
+      pause:"⏸ Pause", cont:"▶ Resume", hintPaused:"<b>Paused</b> · Space to resume", hintPlay:"Space pause · → skip · ← previous step",
+      press:"→ runs", next:"→ Next:", last:"This is the last step", play:"🔊 Start demo",
+      start:'<h3 id="start-title">🔊 Narrated demo</h3><p>Switches to full screen and runs to the end with narration. Space pauses, Esc stops.</p>',
+      fresh:"Start from the beginning<small>Reset the demo data and begin at step 1</small>",
+      resume:"Continue from here<small>Keep the data and start at the current step</small>", cancel:"Cancel"},
+  "zh-TW":{ai:"AI 生成畫面 · 非真實人物", prep:n => `正在準備旁白語音…（${n} 段）`, run:"執行中…",
+      end:"示範結束。可按 ← 回到任何步驟。", data:"正在準備示範資料…",
+      pause:"⏸ 暫停", cont:"▶ 繼續", hintPaused:"<b>已暫停</b> · 按空白鍵繼續", hintPlay:"空白鍵暫停 · → 略過 · ← 上一步",
+      press:"→ 執行", next:"→ 下一步：", last:"這是最後一步", play:"🔊 開始示範",
+      start:'<h3 id="start-title">🔊 旁白示範</h3><p>切換為全螢幕，並搭配旁白自動進行到最後。空白鍵暫停，Esc 結束。</p>',
+      fresh:"從頭開始<small>重設示範資料，從第 1 步開始</small>",
+      resume:"從目前位置繼續<small>保留資料，從目前的步驟開始</small>", cancel:"取消"}};
+const ui = k => U[LANG][k] ?? U.ko[k];
+let NARR = [];                      // 지금 언어의 대본(번역본에는 단계 제목·장·사진 설명도 들어 있다)
+const tr = (i, k, ko) => (LANG !== "ko" && NARR[i]?.[k]) || ko;
+const titleOf = i => tr(i, "title", STEPS[i].title), chOf = i => tr(i, "ch", STEPS[i].ch), captionOf = i => tr(i, "caption", PHOTOS[i]);
+const audioDir = () => LANG === "ko" ? "audio/" : `audio/${LANG}/`;
+async function loadLang(){
+  try{ NARR = await (await fetch(LANG === "ko" ? "narration.json" : `narration.${LANG}.json`)).json(); }catch(e){ NARR = []; }
+  document.documentElement.lang = LANG; const sel = document.querySelector("#lang"); if(sel) sel.value = LANG;
+  const pb = document.querySelector("#play-on"); if(pb) pb.textContent = ui("play");
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.dataset.ko ??= el.innerHTML;
+    el.innerHTML = LANG === "ko" ? el.dataset.ko : (U[LANG][el.dataset.i18n] ?? el.dataset.ko); }); }
+const photo = i => `<figure class="photo"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="${esc(captionOf(i))}" loading="lazy"><span class="ai">${esc(ui("ai"))}</span>
+  <figcaption><b>${i+1}. ${esc(titleOf(i))}</b>${esc(captionOf(i))}</figcaption></figure>`;
 const flow = () => `<h3>전체 흐름 한눈에 — 사진을 누르면 그 단계로 갑니다</h3><div class="flow">${STEPS.map((s, i) =>
-  `<button data-go="${i}"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="" loading="lazy"><span><small>${i+1}. ${esc(s.ch)}</small>${esc(s.title)}</span></button>`).join("")}</div>`;
+  `<button data-go="${i}"><img src="img/step${String(i).padStart(2,"0")}.jpg" alt="" loading="lazy"><span><small>${i+1}. ${esc(chOf(i))}</small>${esc(titleOf(i))}</span></button>`).join("")}</div>`;
 // 여정 지도: 책이 지나가는 정거장 [이모지, 이름, 해당 단계들]
 const JOURNEY = [["🧒","가입",[0,1]],["📚","진도·원고",[2,3]],["⏰","컷오프",[4]],["🗂️","인쇄 순서",[5,6]],["🖨️","인쇄·제본",[7]],["📦","분류·포장",[8]],["🚚","배송",[9]],["👩‍🏫","수업 확인",[10,11,12]],["📸","채점 사진",[13]],["🎉","정리",[14]]];
 const journey = () => { const now = JOURNEY.findIndex(j => j[2].includes(ctx.step));
@@ -431,8 +471,8 @@ const STEPS = [
 ];
 
 function rail(){ let last = "", html = "";
-  STEPS.forEach((s, i) => { if(s.ch !== last){ html += `<h3>${s.ch}</h3>`; last = s.ch; }
-    html += `<button data-go="${i}" class="${i===ctx.step?"on":""} ${ctx.done[i]?"done":""}"><span class="n">${ctx.done[i]?"✓":i+1}</span>${s.title}</button>`; });
+  STEPS.forEach((s, i) => { if(chOf(i) !== last){ html += `<h3>${esc(chOf(i))}</h3>`; last = chOf(i); }
+    html += `<button data-go="${i}" class="${i===ctx.step?"on":""} ${ctx.done[i]?"done":""}"><span class="n">${ctx.done[i]?"✓":i+1}</span>${esc(titleOf(i))}</button>`; });
   $("#rail").innerHTML = html; }
 // 발표 모드에서 → 를 누르면 먼저 실행하는 그 단계의 일(데이터를 지우는 초기화는 넣지 않는다)
 const AUTO = {1:["join","가입 처리"], 3:["assets","견본 원고 붙이기"], 4:["freeze","주문 확정"], 5:["plan","생산 계획 세우기"],
@@ -443,7 +483,7 @@ const pending = () => { const a = AUTO[ctx.step]; if(!a || ctx.done[ctx.step]) r
 function bar(){ $("#bar-count").textContent = `${ctx.step+1} / ${STEPS.length}`;
   $("#bar-prog").style.width = `${(ctx.step+1) / STEPS.length * 100}%`;
   if(P.on) return playUi(); const p = pending(), last = ctx.step >= STEPS.length - 1;
-  $("#bar-hint").innerHTML = p ? `→ 누르면 <b>${esc(p[1])}</b>` : last ? "마지막 단계입니다" : `→ 다음: <b>${esc(STEPS[ctx.step+1].title)}</b>`; }
+  $("#bar-hint").innerHTML = p ? `${ui("press")} <b>${esc(p[1])}</b>` : last ? ui("last") : `${ui("next")} <b>${esc(titleOf(ctx.step+1))}</b>`; }
 let busy = false;
 async function runAct(btn){ const label = btn.textContent; btn.disabled = true; btn.textContent = "진행 중…";
   busy = true; document.body.classList.add("busy");
@@ -457,7 +497,7 @@ async function render(fresh){ rail(); bar(); const s = STEPS[ctx.step]; let body
   if(typeof P !== "undefined" && P.on){ pointed = null; hideFinger(); }
   try{ body = await s.view(); }catch(e){ body = `<div class="note bad">불러오지 못했습니다: ${esc(e.message)}</div>`; }
   $("#main").className = fresh ? "fadein" : "";
-  $("#main").innerHTML = `${journey()}<div class="card"><div class="mute">${esc(s.ch)} · ${ctx.step+1} / ${STEPS.length}</div><h2>${esc(s.title)}</h2>${photo(ctx.step)}${SCENES[ctx.step] ? SCENES[ctx.step]() : ""}${msg?`<div class="note ${msg[0]}">${esc(msg[1])}</div>`:""}${body}</div>
+  $("#main").innerHTML = `${journey()}<div class="card"><div class="mute">${esc(chOf(ctx.step))} · ${ctx.step+1} / ${STEPS.length}</div><h2>${esc(titleOf(ctx.step))}</h2>${photo(ctx.step)}${SCENES[ctx.step] ? SCENES[ctx.step]() : ""}${msg?`<div class="note ${msg[0]}">${esc(msg[1])}</div>`:""}${body}</div>
     <div class="nav"><button class="b" data-go="${ctx.step-1}" ${ctx.step?"":"disabled"}>← 이전</button><button class="b p" data-go="${ctx.step+1}" ${ctx.step<STEPS.length-1?"":"disabled"}>다음 →</button></div>`;
   bar(); save(); }
 // 발표 모드: 전체 화면 + 키보드(→·Space·PageDown 앞으로, ←·PageUp 뒤로, F 전체 화면, Esc 끝)
@@ -469,14 +509,13 @@ document.addEventListener("fullscreenchange", () => { if(!document.fullscreenEle
 // ── 나레이션 자동 시연 ─────────────────────────────────────────────────
 // 대본(narration.json)과 음성(audio/sNN_intro|after.mp3, tools/make_demo_narration.py)으로
 // 단계마다: 화면 열기 → 설명(손가락이 가리킴) → 실행 → 결과 설명 → 다음 단계. 스페이스로 멈춤·계속.
-let NARR = [];
 // 음성 파일은 시작할 때 한 번에 모두 받아 메모리에 둔다 — 재생 중에는 네트워크를 쓰지 않아 끊기지 않는다.
 const CLIPS = {};
 async function preloadClips(){
-  const names = NARR.flatMap((n, i) => ["intro", "after"].filter(p => n[p]).map(p => `s${pad(i)}_${p}`)).filter(k => !CLIPS[k]);
+  const names = NARR.flatMap((n, i) => ["intro", "after"].filter(p => n[p]).map(p => `${audioDir()}s${pad(i)}_${p}.mp3`)).filter(k => !(k in CLIPS));
   if(!names.length) return;
-  bubble(`나레이션 음성을 준비하고 있습니다… (${names.length}개)`, "");
-  await Promise.all(names.map(async k => { try{ const r = await fetch(`audio/${k}.mp3`); if(r.ok) CLIPS[k] = URL.createObjectURL(await r.blob()); }catch(e){} })); }
+  bubble(ui("prep")(names.length), "");
+  await Promise.all(names.map(async k => { try{ const r = await fetch(k); CLIPS[k] = r.ok ? URL.createObjectURL(await r.blob()) : null; }catch(e){} })); }
 const P = {on:false, paused:false, gen:0, audio:null, skip:null, resume:null, rate:1.15};
 const pad = i => String(i).padStart(2, "0");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -515,21 +554,21 @@ function bubble(text, sub){ const b = $("#bubble"); if(text === null){ b.classLi
   $("#bubble-text").textContent = text; $("#bubble-sub").textContent = sub || ""; b.classList.add("on"); b.classList.toggle("paused", P.paused); }
 function speak(i, part, gen){ return new Promise(done => {
   const text = NARR[i]?.[part]; if(!text || gen !== P.gen) return done();
-  point(NARR[i][part + "_point"]); bubble(text, `${i+1} / ${STEPS.length} · ${STEPS[i].title}`);
+  point(NARR[i][part + "_point"]); bubble(text, `${i+1} / ${STEPS.length} · ${titleOf(i)}`);
   const finish = () => { P.audio = null; P.skip = null; done(); };
-  const a = new Audio(CLIPS[`s${pad(i)}_${part}`] || `audio/s${pad(i)}_${part}.mp3`); a.playbackRate = P.rate; a.preservesPitch = true;
+  const file = `${audioDir()}s${pad(i)}_${part}.mp3`, a = new Audio(CLIPS[file] === null ? "" : CLIPS[file] || file); a.playbackRate = P.rate; a.preservesPitch = true;
   P.audio = a; P.skip = () => { a.pause(); speechSynthesis?.cancel(); finish(); };
   a.onended = finish;
   const fallback = () => {          // 음성 파일이 없으면 브라우저 음성으로 읽는다
     if(!window.speechSynthesis) return setTimeout(finish, text.length * 90 / P.rate);
-    const u = new SpeechSynthesisUtterance(text); u.lang = "ko-KR"; u.rate = P.rate; u.onend = finish; u.onerror = finish;
+    const u = new SpeechSynthesisUtterance(text); u.lang = VOICE_LANG[LANG]; u.rate = P.rate; u.onend = finish; u.onerror = finish;
     P.audio = {pause: () => speechSynthesis.pause(), play: () => speechSynthesis.resume()}; speechSynthesis.speak(u); };
   a.onerror = fallback;
   const start = () => a.play().catch(fallback);
   P.paused ? (P.resume = start) : start(); }); }
 async function autoplay(from){
   const gen = ++P.gen; P.skip?.(); P.on = true; P.paused = false; document.body.classList.add("playing"); playUi();
-  if(!NARR.length){ try{ NARR = await (await fetch("narration.json")).json(); }catch(e){ NARR = []; } }
+  if(!NARR.length) await loadLang();
   await preloadClips(); if(gen !== P.gen) return;
   for(let i = Math.max(0, from); i < STEPS.length; i++){
     if(gen !== P.gen) return;
@@ -537,12 +576,12 @@ async function autoplay(from){
     await speak(i, "intro", gen); if(gen !== P.gen) return;
     await waitResume(); if(gen !== P.gen) return;
     const p = pending();
-    if(p){ bubble("실행 중입니다…", `${i+1} / ${STEPS.length} · ${STEPS[i].title}`); point(`[data-act="${p[0].dataset.act}"]`);
+    if(p){ bubble(ui("run"), `${i+1} / ${STEPS.length} · ${titleOf(i)}`); point(`[data-act="${p[0].dataset.act}"]`);
       await runAct(p[0]); if(gen !== P.gen) return; await sleep(500); }
     if(NARR[i]?.after){ await speak(i, "after", gen); if(gen !== P.gen) return; }
     await waitResume(); await sleep(800);
   }
-  if(gen === P.gen){ P.on = false; pointed = null; hideFinger(); bubble("시연을 마쳤습니다. ← 로 원하는 단계를 다시 볼 수 있습니다.", ""); playUi(); }
+  if(gen === P.gen){ P.on = false; pointed = null; hideFinger(); bubble(ui("end"), ""); playUi(); }
 }
 function stopPlay(){ P.gen++; P.skip?.(); P.on = false; P.paused = false; P.resume = null; pointed = null;
   document.querySelectorAll(".spot").forEach(x => x.classList.remove("spot")); hideFinger(); bubble(null);
@@ -552,8 +591,8 @@ function togglePause(){ if(!P.on) return autoplay(ctx.step);
   if(P.paused){ P.audio?.pause(); }
   else { if(P.resume){ const r = P.resume; P.resume = null; r(); } else P.audio?.play(); }
   $("#bubble").classList.toggle("paused", P.paused); playUi(); }
-function playUi(){ $("#bar-play").textContent = P.paused ? "▶ 계속" : "⏸ 일시정지";
-  if(P.on) $("#bar-hint").innerHTML = P.paused ? "<b>일시정지</b> · 스페이스로 계속" : "스페이스 멈춤 · → 건너뛰기 · ← 앞 단계"; else bar(); }
+function playUi(){ $("#bar-play").textContent = P.paused ? ui("cont") : ui("pause");
+  if(P.on) $("#bar-hint").innerHTML = P.paused ? ui("hintPaused") : ui("hintPlay"); else bar(); }
 // 시작 선택은 페이지 안 버튼으로 받는다. 브라우저는 '누른 그 순간'에만 전체 화면을 허락하므로
 // (확인 창을 거치거나 초기화를 기다린 뒤에 요청하면 조용히 거부된다) 누르자마자 전체 화면부터 켠다.
 function startPlay(){ $("#start").classList.add("on"); $("#start [data-start=fresh]").focus(); }
@@ -563,7 +602,7 @@ $("#start").addEventListener("click", async e => {
   $("#start").classList.remove("on");
   const how = b ? b.dataset.start : "cancel"; if(how === "cancel") return;
   showOn();                                                  // 클릭 순간에 바로
-  if(how === "fresh"){ bubble("시연 데이터를 준비하고 있습니다…", ""); await api("/api/reset", {confirm:"RESET"});
+  if(how === "fresh"){ bubble(ui("data"), ""); await api("/api/reset", {confirm:"RESET"});
     ctx = {step:0, done:{0:true}}; META = await api("/api/meta"); }
   autoplay(how === "fresh" ? 0 : ctx.step); });
 // 누른 뒤 포커스를 풀어 둔다 — 남아 있으면 스페이스가 이 버튼도 한 번 더 눌러 멈췄다 바로 다시 재생된다
@@ -594,9 +633,11 @@ document.body.addEventListener("click", async e => {
     catch(err){ msg = ["bad", err.message]; }
     return render(); }
 });
-(async () => { META = await api("/api/meta");
+$("#lang").onchange = async e => { if(P.on) stopPlay(); LANG = e.target.value;
+  try{ localStorage.setItem("harubook-lang", LANG); }catch(err){} await loadLang(); render(); };
+(async () => { await loadLang(); META = await api("/api/meta");
   if(ctx.sid){ try{ await api(`/api/students/${ctx.sid}`); }catch(e){ ctx = {step:0, done:{}}; } }   // DB가 초기화됐으면 처음부터
   render(); })().catch(e => { $("#main").innerHTML = `<div class="card">불러오지 못했습니다: ${esc(e.message)}</div>`; });
 </script>
-
+</body>
 </html>
